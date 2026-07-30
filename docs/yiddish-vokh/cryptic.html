@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="yi" dir="rtl">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZYQZ5BWE0V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZYQZ5BWE0V');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>כיטרע רעטענישן מיט חזקי פֿישער</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@300;400;500;600;700&family=Iosevka+Charon+Mono&family=Noto+Sans+Symbols+2&family=Noto+Sans+JP&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="solver-common.css" />
+  <style>
+    /* Shared base/card/cell/button/keyboard/modal styles live in
+       solver-common.css; only styles specific to this page are here. */
+    body.embed .page-header { display: none; }
+    .header-edit-btn {
+      margin-right: auto;
+      background: none; border: none; cursor: pointer;
+      color: #9a7840;
+      font-size: 1.25rem;
+      width: 2rem; height: 2rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      padding: 0;
+    }
+    .header-edit-btn:hover { color: #2b1d08; background: #e8dcc8; }
+
+    /* ── Puzzle styles ── */
+    .clue-text { font-size: 1.25rem; font-weight: 500; line-height: 1.7; color: #1a1209; margin-bottom: 0.5rem; }
+    .clue-length { font-size: inherit; color: #7a6040; font-weight: 300; margin-right: 0.4rem; }
+    .author-line { font-size: 0.85rem; color: #7a6040; margin-bottom: 1.3rem; }
+    .author-line bdi { unicode-bidi: isolate; font-weight: 500; color: #5a3e1b; }
+
+    .grid-wrapper {
+      display: flex; flex-direction: row; align-items: center;
+      justify-content: center; gap: 0; row-gap: 0.6rem; margin-bottom: 1.6rem;
+      flex-wrap: wrap; outline: none; user-select: none;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 0.15rem;
+    }
+    .word-cluster { display: flex; flex-direction: row; align-items: center; flex-shrink: 0; }
+    .word-group { display: flex; flex-direction: row; flex-shrink: 0; }
+    .cell-gap-space { width: 2.5rem; display: inline-block; flex-shrink: 0; align-self: center; }
+    .cell-gap-punct {
+      display: flex; align-items: center; justify-content: center;
+      width: 1.4rem; font-size: 1.3rem; font-weight: 600;
+      color: #2b1d08; padding: 0 2px; flex-shrink: 0;
+    }
+    .word-group .cell:not(:first-child) { border-right: none; }
+
+    /* (solved-banner and the explanation/hints detail styles are shared —
+       see solver-common.css) */
+    .solved-view { display: none; text-align: center; }
+    .solved-close {
+      position: absolute; top: 0; left: 0;
+      background: none; border: none; cursor: pointer;
+      font-size: 1.2rem; color: #7a6040; width: 2rem; height: 2rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px; transition: background 0.1s;
+    }
+    .solved-close:hover { background: #eee5d0; color: #2b1d08; }
+    .solved-clue { font-size: 1.05rem; color: #5a3e1b; line-height: 1.7; margin-bottom: 1rem; font-style: italic; }
+    .solved-answer { font-size: 1.6rem; font-weight: 700; color: #1a1209; letter-spacing: 0.12em; margin-bottom: 1.4rem; }
+
+    /* ── Contents view ── */
+    .contents-view { display: block; }
+    .contents-title {
+      font-size: 1rem; font-weight: 600; color: #5a3e1b;
+      margin-bottom: 1.2rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e4d8be; letter-spacing: 0.02em;
+    }
+    .contents-list { list-style: none; }
+    .contents-item {
+      border-bottom: 1px solid #e4d8be; padding: 0.65rem 0;
+    }
+    .contents-item:last-child { border-bottom: none; }
+    .contents-link {
+      font-size: 1.05rem; color: #2b1d08; text-decoration: none;
+      font-weight: 500; display: block; transition: color 0.15s;
+    }
+    .contents-link:hover { color: #c4963a; }
+    .contents-footer { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #e4d8be; text-align: center; }
+
+    /* ── Back button ── */
+    .back-btn {
+      display: none; align-items: center; gap: 0.3rem;
+      background: none; border: none; color: #7a6040;
+      font-size: 0.85rem; font-weight: 500; cursor: pointer;
+      margin-bottom: 1.2rem; padding: 0; font-family: inherit;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: #2b1d08; }
+    .back-btn.visible { display: flex; }
+
+    /* ── Builder styles ── */
+    .builder { display: block; }
+    .builder-title {
+      font-size: 1rem; font-weight: 600; color: #5a3e1b;
+      margin-bottom: 1.4rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e4d8be; letter-spacing: 0.02em;
+    }
+    .field-group { margin-bottom: 1.2rem; }
+    .field-label { display: block; font-size: 0.8rem; color: #7a6040; font-weight: 500; margin-bottom: 0.35rem; letter-spacing: 0.03em; }
+    .field-input {
+      width: 100%; border: 1.5px solid #c4b08a; border-radius: 3px;
+      padding: 0.55rem 0.75rem; font-size: 1rem; color: #1a1209;
+      background: #fff; direction: rtl; transition: border-color 0.15s; line-height: 1.5;
+    }
+    .field-input:focus { outline: none; border-color: #c4963a; }
+    textarea.field-input { resize: vertical; min-height: 5rem; }
+    .field-hint { font-size: 0.75rem; color: #9a7840; margin-top: 0.3rem; line-height: 1.4; min-height: 2.8em; }
+    .field-hint.warning { color: #8a2020; }
+
+    .hints-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .hint-row { display: flex; align-items: center; gap: 0.4rem; }
+    .hint-row .field-input { flex: 1; }
+    .btn-remove-hint {
+      flex-shrink: 0; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+      background: #e8dcc8; color: #7a6040; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s; border: none; cursor: pointer;
+    }
+    .btn-remove-hint:hover { background: #d4c4a0; color: #2b1d08; }
+    .btn-add-hint {
+      font-size: 0.85rem; color: #5a3e1b; border: 1.5px dashed #b0966a;
+      border-radius: 3px; padding: 0.35rem 0.75rem;
+      transition: background 0.1s; background: transparent;
+    }
+    .btn-add-hint:hover { background: #f3ede0; }
+    .builder-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.6rem; }
+
+    /* ── Generated link area ── */
+    .link-area {
+      display: none; margin-top: 1.6rem;
+      background: #f3ede0; border: 1px solid #d4c4a0;
+      border-radius: 4px; padding: 1rem 1.1rem;
+    }
+    .link-error { font-size: 0.88rem; color: #8a2020; margin-bottom: 0.6rem; }
+    .link-label { font-size: 0.78rem; color: #7a6040; margin-bottom: 0.5rem; font-weight: 500; letter-spacing: 0.03em; }
+    .link-row { display: flex; align-items: center; gap: 0.5rem; }
+    .link-anchor {
+      flex: 1; font-size: 0.78rem; color: #2b1d08; direction: ltr;
+      text-align: left; word-break: break-all; text-decoration: underline;
+      text-underline-offset: 2px; cursor: pointer;
+      background: none; border: none; padding: 0; font-family: monospace; line-height: 1.5;
+    }
+    .link-anchor:hover { color: #c4963a; }
+    .btn-copy {
+      flex-shrink: 0; background: #ede4cf; color: #2b1d08;
+      border: 1.5px solid #b0966a; border-radius: 3px;
+      width: 3rem; height: 3.6rem;
+      font-size: 2rem; transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 0 #b0966a;
+    }
+    .btn-copy:hover { background: #f7efda; }
+    .btn-copy.copied { background: #c8e6c8; border-color: #5a9a5a; }
+
+
+    /* ── Responsive (page-specific; shared rules in solver-common.css) ── */
+    @media (max-width: 540px) {
+      .cell-gap-space { width: 2rem; }
+      .cell-gap-punct { width: 1.1rem; font-size: 1.05rem; }
+    }
+    @media (max-width: 360px) {
+      .cell-gap-space { width: 1.85rem; }
+    }
+  </style>
+</head>
+<body>
+<script>if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');</script>
+
+<header class="page-header">
+  <span class="ornament">✦</span>
+  <h1>כיטרע רעטענישן מיט חזקי פֿישער</h1>
+  <button class="header-edit-btn" id="header-edit-btn" aria-label="שרײַב אַ רעטעניש" title="שרײַב אַ רעטעניש"><i class="ti ti-edit"></i></button>
+</header>
+
+<!-- The active view is rendered into #main-card by render() from the
+     <template>s below, so only one view ever exists in the DOM at a time. -->
+<main class="card" id="main-card"></main>
+
+<!-- Hint modal -->
+<div class="modal-overlay hidden" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-title">הילף</h2>
+      <button class="modal-close" id="modal-close" aria-label="שליסן"><span class="sym-x">✕</span></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══ View templates — cloned into #main-card by render() ═══ -->
+
+<template id="tpl-contents">
+  <div class="contents-view" id="contents-view">
+    <div class="contents-title" id="contents-title">רעטענישן</div>
+    <ul class="contents-list" id="contents-list"></ul>
+    <div class="contents-footer">
+      <button class="btn-secondary" id="contents-make-btn"><i class="ti ti-edit" style="font-size:1rem;vertical-align:middle;margin-left:0.35rem;"></i>שרײַב אַ רעטעניש</button>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-builder">
+  <div class="builder" id="builder">
+    <button class="back-btn" id="builder-back-btn"><span class="sym-x">&#x2B95;</span> צוריק</button>
+    <div class="builder-title">שרײַבן אַ רעטעניש</div>
+    <div class="field-group">
+      <label class="field-label" for="b-clue">רעטעניש</label>
+      <textarea class="field-input" id="b-clue" rows="3" placeholder="שרײַב דאָ די רעטעניש…"></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="b-answer">ענטפֿער</label>
+      <input class="field-input" id="b-answer" type="text" placeholder="שרײַב דאָ דעם ענטפֿער…" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <div class="field-hint" id="b-length-preview"></div>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="b-explanation">אױסטײַטש (נישט חיובֿ)</label>
+      <textarea class="field-input" id="b-explanation" rows="3" placeholder="שרײַב דאָ דעם אױסטײַטש…"></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="b-author">מחבר (נישט חיובֿ)</label>
+      <input class="field-input" id="b-author" type="text" placeholder="ווער האָט געשריבן די רעטעניש…" autocomplete="off" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">עצות</label>
+      <div class="hints-list" id="b-hints-list"></div>
+      <button class="btn-add-hint" id="b-add-hint" type="button"><span class="sym-plus">＋</span> נאָך אַן עצה</button>
+    </div>
+    <div class="builder-actions">
+      <button class="btn-primary" id="b-generate" type="button">ענדיקן</button>
+    </div>
+    <div class="link-area" id="link-area">
+      <p class="link-error" id="link-error" style="display:none"></p>
+      <div class="link-label" id="link-label">שיק דעם לינק צו דעם לייזער</div>
+      <div class="link-row" id="link-row">
+        <a class="link-anchor" id="link-anchor" target="_blank" href="#"></a>
+        <button class="btn-copy" id="btn-copy" type="button" title="קאָפּירן" aria-label="קאָפּירן">
+          <i class="ti ti-copy"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-puzzle">
+  <!-- Puzzle view -->
+  <div id="puzzle-view">
+    <button class="back-btn" id="back-btn"><span class="sym-x">&#x2B95;</span> צוריק</button>
+    <p class="clue-text" id="clue-text"></p>
+    <p class="author-line" id="author-line" style="display:none">געשריבן דורך <bdi id="author-value"></bdi></p>
+    <div class="grid-wrapper" id="grid-wrapper" tabindex="0" role="group" aria-label="ענטפֿער-ראַמע"></div>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-solve" disabled>לײז</button>
+      <button class="btn-secondary" id="btn-hint">הילף</button>
+      <button class="btn-reveal" id="btn-reveal" style="display:none">אַנטפּלעק אַן אות</button>
+    </div>
+    <div class="kb-divider"></div>
+    <div class="keyboard" id="keyboard"></div>
+  </div>
+  <!-- Solved sub-view (toggled within the puzzle render) -->
+  <div class="solved-view" id="solved-view">
+    <button class="solved-close" id="solved-close" aria-label="שליסן"><span class="sym-x">✕</span></button>
+    <div class="solved-banner">געלייזט!</div>
+    <p class="solved-clue" id="solved-clue"></p>
+    <p class="author-line" id="solved-author-line" style="display:none">געשריבן דורך <bdi id="solved-author-value"></bdi></p>
+    <div class="solved-answer" id="solved-answer"></div>
+    <!-- Explanation + available hints, rendered by renderSolvedDetails
+         (solver-common.js) — the grid page's 🔑 modal shows the same. -->
+    <div id="solved-details"></div>
+  </div>
+</template>
+
+<!-- PUZZLE_DATA -->
+
+<script src="normalize.js"></script>
+<script src="solver-common.js"></script>
+<script>
+  // normaliseHebrew lives in normalize.js; KB_ROWS/buildKeyboard,
+  // makeCellInput, the b64 codec, and the modal helpers live in
+  // solver-common.js (both loaded above).
+
+  // Parse one puzzle entry, either the legacy flat array
+  // [clue, answer, explanation, ...hints] or an object
+  // { clue, answer, explanation, hints, author } (author is optional).
+  function parsePuzzleEntry(entry) {
+    if (Array.isArray(entry)) {
+      if (entry.length < 2) return null;
+      return normalisePuzzleData({ clue: entry[0], answer: entry[1], explanation: entry[2] || '', hints: entry.slice(3) });
+    }
+    if (entry && typeof entry === 'object' && typeof entry.clue === 'string' && typeof entry.answer === 'string') {
+      return normalisePuzzleData({
+        clue: entry.clue,
+        answer: entry.answer,
+        explanation: entry.explanation || '',
+        hints: Array.isArray(entry.hints) ? entry.hints : [],
+        author: typeof entry.author === 'string' && entry.author ? entry.author : undefined,
+      });
+    }
+    return null;
+  }
+
+  // Parse raw decoded value into { single: puzzleObj } or { multi: {name: puzzleObj} }
+  function parseDecoded(raw) {
+    if (!raw) return null;
+    if (Array.isArray(raw)) {
+      const single = parsePuzzleEntry(raw);
+      return single ? { single } : null;
+    }
+    if (typeof raw === 'object') {
+      // A single puzzle can be encoded directly as an object with clue/answer.
+      if (typeof raw.clue === 'string' && typeof raw.answer === 'string') {
+        const single = parsePuzzleEntry(raw);
+        return single ? { single } : null;
+      }
+      // Otherwise it's a dict of puzzles: { name: <entry> }, entry being
+      // either the legacy array form or the object form above.
+      const multi = {};
+      for (const [name, entry] of Object.entries(raw)) {
+        const p = parsePuzzleEntry(entry);
+        if (p) multi[name] = p;
+      }
+      if (Object.keys(multi).length === 0) return null;
+      return { multi };
+    }
+    return null;
+  }
+  // Hash format:  #d=<base64>        — data only (single puzzle or contents)
+  //               #d=<base64>&p=<n>  — data + 1-based puzzle index to open
+  // (b64encode/b64decode live in solver-common.js.)
+  function getHashParams() {
+    return new URLSearchParams(window.location.hash.slice(1));
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Data source + routing
+  // `source` is the one place that knows where the current data comes from
+  // (a #d= hash link, or the embedded _pd blob). Everything else is
+  // source-agnostic: views render from the parsed data, and every navigation
+  // goes through the URL hash via go(), so there is a single render path.
+  // ═══════════════════════════════════════════════════════
+  const source = {
+    raw: null,        // base64 of the current data, or null when it came from _pd
+    embedded: false,  // true when the data came from the embedded _pd blob
+
+    // Resolve the current data: a #d= hash link wins over the embedded _pd.
+    // Records the origin so hash() can rebuild URLs correctly.
+    load() {
+      const d = getHashParams().get('d');
+      if (d) {
+        const parsed = parseDecoded(b64decode(d));
+        if (parsed) { this.raw = d; this.embedded = false; return parsed; }
+      }
+      if (typeof _pd !== 'undefined') {
+        const parsed = parseDecoded(b64decode(_pd));
+        if (parsed) { this.raw = null; this.embedded = true; return parsed; }
+      }
+      return null;
+    },
+
+    // Build a hash fragment for the current data plus one navigation extra.
+    // The data (d=) is carried only when it isn't already baked in.
+    hash({ p, create } = {}) {
+      const parts = [];
+      if (!this.embedded && this.raw) parts.push('d=' + encodeURIComponent(this.raw));
+      if (p != null)  parts.push('p=' + p);
+      if (create)     parts.push('create');
+      return parts.join('&');
+    },
+  };
+
+  // Reset transient state and re-render from the URL.
+  function reboot() {
+    puzzleData = null; multiPuzzles = null;
+    cells = []; activeIdx = 0; hintState.revealed = 0;
+    boot();
+  }
+
+  // The one way to change views: write the hash, let boot() re-read it and
+  // render. Keeps a single render path and consistent browser Back/Forward.
+  function go(extra) {
+    const h = source.hash(extra);
+    if (h) {
+      if (location.hash === '#' + h) reboot();  // hash unchanged — render directly
+      else location.hash = h;                   // changes hash -> hashchange -> reboot()
+    } else {
+      // Target is the bare page (embedded "home"); clearing the fragment doesn't
+      // reliably fire hashchange, so drop it and reboot() explicitly.
+      if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+      reboot();
+    }
+  }
+
+  // For the builder — encodes a single puzzle as a data object
+  function makeURL(data) {
+    const obj = { clue: data.clue, answer: data.answer, explanation: data.explanation || '', hints: data.hints };
+    if (data.author) obj.author = data.author;
+    const base = window.location.href.split('#')[0].split('?')[0];
+    return base + '#d=' + encodeURIComponent(b64encode(obj));
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // State
+  // ═══════════════════════════════════════════════════════
+  let puzzleData = null;
+  let multiPuzzles = null;   // dict of puzzles when in contents mode
+  let cells = [];
+  let activeIdx = 0;
+  const hintState = { revealed: 0 };   // progress for renderHints (solver-common.js)
+
+  // ═══════════════════════════════════════════════════════
+  // Boot — render the view named by the URL. Routing only reads three things:
+  // the data (via source.load), ?p=<n> (which puzzle), and #create.
+  // ═══════════════════════════════════════════════════════
+
+  // Ensure puzzleData always has a length field, derived from answer if absent.
+  function normalisePuzzleData(data) {
+    if (!data.length) data.length = answerToLengthSpec(data.answer);
+    return data;
+  }
+
+  function boot() {
+    const params = getHashParams();
+    const data = source.load();   // resolves #d= or _pd; records the origin
+
+    // #create opens the builder; offer a back button only if there's data to return to.
+    if (params.has('create')) {
+      showBuilder(null, data != null);
+      return;
+    }
+
+    if (data) { loadParsed(data, params.get('p')); return; }
+
+    // No usable data. A present-but-unreadable #d= link gets an explanatory error.
+    if (params.get('d')) { showBuilder('קען נישט לייענען דעם לינק. פּרוּוו אַ נייעם.'); return; }
+    showBuilder();
+  }
+
+  function loadParsed(parsed, pParam) {
+    if (parsed.single) {
+      startPuzzle(parsed.single, false);
+    } else {
+      multiPuzzles = parsed.multi;
+      // If a puzzle index is specified in the URL, open it directly
+      const idx = pParam ? parseInt(pParam, 10) - 1 : -1;
+      const entries = Object.entries(multiPuzzles);
+      if (idx >= 0 && idx < entries.length) {
+        startPuzzle(entries[idx][1], true);
+      } else {
+        showContents();
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // View rendering
+  // Each top-level view (contents, builder, puzzle) is rebuilt from a
+  // <template> into #main-card. Because the previous view's DOM is discarded,
+  // listeners and form state never leak between views, and switching views
+  // needs no manual teardown.
+  // ═══════════════════════════════════════════════════════
+  function render(tplId) {
+    const card = document.getElementById('main-card');
+    card.innerHTML = '';
+    card.appendChild(document.getElementById(tplId).content.cloneNode(true));
+    // The hint modal lives outside the card; keep it closed on every render.
+    closeModal();
+    document.getElementById('modal-body').innerHTML = '';
+  }
+
+  function showContents() {
+    render('tpl-contents');
+    const list = document.getElementById('contents-list');
+    document.getElementById('contents-make-btn').onclick = () => go({ create: true });
+    Object.keys(multiPuzzles).forEach((name, i) => {
+      const li = document.createElement('li'); li.className = 'contents-item';
+      const a = document.createElement('a'); a.className = 'contents-link';
+      a.href = '#'; a.textContent = name;
+      // Navigate to ?p=<1-based index>; boot() opens the puzzle.
+      a.addEventListener('click', e => { e.preventDefault(); go({ p: i + 1 }); });
+      li.appendChild(a); list.appendChild(li);
+    });
+  }
+
+  function startPuzzle(data, showBack) {
+    puzzleData = data;
+    hintState.revealed = 0;
+    cells = [];
+    render('tpl-puzzle');
+    if (showBack) {
+      const backBtn = document.getElementById('back-btn');
+      backBtn.classList.add('visible');
+      backBtn.onclick = () => go();   // drop ?p= -> contents
+    }
+    initPuzzle();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Builder
+  // ═══════════════════════════════════════════════════════
+  // formatLengthSpec / answerToLengthSpec live in normalize.js.
+
+  function showBuilder(errorMsg, canGoBack) {
+    render('tpl-builder');
+    if (errorMsg) {
+      const el = document.createElement('p');
+      el.style.cssText = 'color:#7a2020;font-size:.9rem;margin-bottom:1rem;';
+      el.textContent = errorMsg;
+      document.getElementById('builder').prepend(el);
+    }
+    // Offer a back button only when there's data to return to.
+    if (canGoBack) {
+      const backBtn = document.getElementById('builder-back-btn');
+      backBtn.classList.add('visible');
+      backBtn.onclick = () => go();   // drop #create -> data view
+    }
+    initBuilder();
+  }
+
+  // The builder DOM is freshly cloned on every render(), so there are no stale
+  // listeners or leftover field values to clear here.
+  function initBuilder() {
+    const answerInput = document.getElementById('b-answer');
+    const preview = document.getElementById('b-length-preview');
+    answerInput.addEventListener('input', () => {
+      const val = answerInput.value;
+      const spec = answerToLengthSpec(val);
+      // Detect any characters that survive but aren't Hebrew base letters,
+      // spaces, or common word-separators (hyphen, comma, en-dash)
+      const nonHebrew = [...val].filter(ch => {
+        const cp = ch.codePointAt(0);
+        // Allow: Hebrew base (05D0-05EA), Hebrew pointed (05B0-05C7, FB block),
+        // finals (05DA,05DD,05DF,05E3,05E5), Yiddish digraphs (05F0-05F2),
+        // spaces and separators (- , –)
+        return !(
+          (cp >= 0x05B0 && cp <= 0x05EA) ||
+          (cp >= 0xFB1D && cp <= 0xFB4E) ||
+          (cp >= 0x05F0 && cp <= 0x05F2) ||
+          ANSWER_SEP_CHARS.includes(ch)
+        );
+      });
+      if (nonHebrew.length > 0) {
+        const chars = [...new Set(nonHebrew)].join(' ');
+        preview.textContent = 'נישט ייִדישע אותיות: ' + chars;
+        preview.classList.add('warning');
+      } else {
+        preview.textContent = spec ? formatLengthSpec(spec) : '';
+        preview.classList.remove('warning');
+      }
+    });
+
+    const hintsList = document.getElementById('b-hints-list');
+    function addHintRow(value) {
+      const row = document.createElement('div');
+      row.className = 'hint-row';
+      const inp = document.createElement('input');
+      inp.className = 'field-input'; inp.type = 'text';
+      inp.placeholder = '\u05E2\u05E6\u05D4\u2026'; inp.value = value || '';
+      inp.autocomplete = 'off'; inp.spellcheck = false;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove-hint'; removeBtn.type = 'button';
+      removeBtn.innerHTML = '<span class="sym-x">\u00D7</span>'; removeBtn.title = '\u05D0\u05B7\u05E8\u05D0\u05B8\u05E4\u05BC\u05E0\u05E2\u05DE\u05E2\u05DF';
+      removeBtn.addEventListener('click', () => row.remove());
+      row.appendChild(inp); row.appendChild(removeBtn);
+      hintsList.appendChild(row);
+      return inp;
+    }
+
+    document.getElementById('b-add-hint').addEventListener('click', () => addHintRow('').focus());
+
+    document.getElementById('b-generate').addEventListener('click', () => {
+      const clue = document.getElementById('b-clue').value.trim();
+      const answer = answerInput.value.trim();
+      const errEl = document.getElementById('link-error');
+      const labelEl = document.getElementById('link-label');
+      const rowEl = document.getElementById('link-row');
+      if (!clue || !answer) {
+        errEl.textContent = 'די רעטעניש און ענטפֿער טאָרן נישט זיין ליידיק';
+        errEl.style.display = 'block';
+        labelEl.style.display = 'none';
+        rowEl.style.display = 'none';
+        document.getElementById('link-area').style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+      labelEl.style.display = '';
+      rowEl.style.display = '';
+      const hints = Array.from(hintsList.querySelectorAll('input')).map(i => i.value.trim()).filter(Boolean);
+      const explanation = document.getElementById('b-explanation').value.trim();
+      const author = document.getElementById('b-author').value.trim();
+      const data = { clue, answer, explanation, hints, author };
+      const url = makeURL(data);
+      const anchor = document.getElementById('link-anchor');
+      anchor.href = url; anchor.textContent = url;
+      document.getElementById('link-area').style.display = 'block';
+      anchor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    const copyBtn = document.getElementById('btn-copy');
+    copyBtn.addEventListener('click', async () => {
+      const url = document.getElementById('link-anchor').href;
+      try { await navigator.clipboard.writeText(url); }
+      catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = url; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      }
+      copyBtn.classList.add('copied');
+      setTimeout(() => copyBtn.classList.remove('copied'), 2000);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Grid
+  // ═══════════════════════════════════════════════════════
+  function focusActiveCell() {
+    if (cells[activeIdx]) cells[activeIdx].el.focus();
+  }
+
+  function buildGrid(lengthSpec) {
+    const wrapper = document.getElementById('grid-wrapper');
+    wrapper.innerHTML = ''; cells = [];
+    const words = parseLengthSpec(lengthSpec);
+
+    // Group consecutive words joined by non-space separators into a no-wrap
+    // cluster so they never wrap mid-dash/maqaf. Space-separated words are
+    // each in their own cluster and wrap freely between them.
+    const clusters = [];
+    let current = [];
+    words.forEach(word => {
+      current.push(word);
+      const isSpaceSep = word.sep === null || word.sep.trim() === '' || word.sep === ' ';
+      if (isSpaceSep) { clusters.push(current); current = []; }
+    });
+    if (current.length) clusters.push(current);
+
+    clusters.forEach((cluster, ci) => {
+      // Each cluster is a flex container that doesn't wrap internally
+      const clusterEl = document.createElement('div');
+      clusterEl.className = 'word-cluster';
+      cluster.forEach(word => {
+        const group = document.createElement('div'); group.className = 'word-group';
+        for (let j = 0; j < word.count; j++) {
+          const cell = makeCellInput();
+          const idx = cells.length;
+          cell.addEventListener('focus', () => { setActive(idx); });
+          cell.addEventListener('input', e => {
+            const isSolved = document.getElementById('solved-view').style.display === 'block';
+            if (isModalOpen() || isSolved || cells[idx].locked) { cell.value = cells[idx].value; return; }
+            const raw = cell.value; cell.value = '';
+            const norm = normaliseHebrew(raw);
+            if (norm) inputLetters(norm);
+          });
+          cell.addEventListener('keydown', e => {
+            const isSolved = document.getElementById('solved-view').style.display === 'block';
+            if (isModalOpen() || isSolved) return;
+            if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); cell.value = ''; doBackspace(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); for (let d=1;d<cells.length;d++) { const t=activeIdx-d; if(t>=0 && !cells[t].locked){setActive(t);break;} } }
+            else if (e.key === 'ArrowLeft')  { e.preventDefault(); for (let d=1;d<cells.length;d++) { const t=activeIdx+d; if(t<cells.length && !cells[t].locked){setActive(t);break;} } }
+            else if (e.key === 'Enter') { e.preventDefault(); const btn = document.getElementById('btn-solve'); if (btn && !btn.disabled) btn.click(); }
+          });
+          group.appendChild(cell); cells.push({ el: cell, value: '' });
+        }
+        clusterEl.appendChild(group);
+        // Non-space separator (dash, maqaf) sits inside the cluster
+        if (word.sep !== null) {
+          const sepStr = word.sep.trim();
+          if (sepStr !== '' && word.sep !== ' ') {
+            const pu = document.createElement('div'); pu.className = 'cell-gap-punct'; pu.textContent = sepStr;
+            clusterEl.appendChild(pu);
+          }
+        }
+      });
+      wrapper.appendChild(clusterEl);
+      // Space gap sits between clusters in the outer wrapper (wrap point)
+      const lastWord = cluster[cluster.length - 1];
+      if (lastWord.sep !== null && (lastWord.sep === ' ' || lastWord.sep.trim() === '') && ci < clusters.length - 1) {
+        const sp = document.createElement('div'); sp.className = 'cell-gap-space'; wrapper.appendChild(sp);
+      }
+    });
+    setActive(0);
+  }
+
+  function setActive(idx) {
+    if (idx < 0 || idx >= cells.length) return;
+    if (cells[idx].locked) return; // cannot select a locked cell
+    cells.forEach(c => c.el.classList.remove('active'));
+    activeIdx = idx;
+    cells[idx].el.classList.add('active');
+    if (document.activeElement !== cells[idx].el) {
+      cells[idx].el.focus();
+    }
+    // Select any existing letter so the next keystroke replaces it instead
+    // of appending — see the matching comment in grid-template.html.
+    cells[idx].el.select();
+    updateSolveBtn();
+  }
+
+  function inputLetters(chars) {
+    for (const ch of chars) {
+      // Skip past any locked cells
+      while (activeIdx < cells.length && cells[activeIdx].locked) activeIdx++;
+      if (activeIdx >= cells.length) break;
+      cells[activeIdx].value = ch;
+      cells[activeIdx].el.value = ch;
+      // Advance activeIdx to next unlocked cell
+      cells.forEach(c => c.el.classList.remove('active'));
+      let next = activeIdx + 1;
+      while (next < cells.length && cells[next].locked) next++;
+      activeIdx = next < cells.length ? next : activeIdx;
+      cells[activeIdx].el.classList.add('active');
+      updateSolveBtn();
+    }
+    if (activeIdx < cells.length) {
+      cells[activeIdx].el.focus();
+      // Same-cell case (already at the last unlocked cell): no fresh focus
+      // event fires from setActive, so select here too — see the comment
+      // in grid-template.html's refreshHighlight.
+      cells[activeIdx].el.select();
+    }
+    updateSolveBtn();
+  }
+
+  function doBackspace() {
+    if (cells[activeIdx].value) {
+      cells[activeIdx].value = ''; cells[activeIdx].el.value = ''; updateSolveBtn();
+    } else if (activeIdx > 0) {
+      setActive(activeIdx - 1);
+      cells[activeIdx].value = ''; cells[activeIdx].el.value = ''; updateSolveBtn();
+    }
+  }
+
+  function updateSolveBtn() {
+    document.getElementById('btn-solve').disabled = !cells.every(c => c.value !== '');
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // On-screen keyboard — layout/DOM come from solver-common.js; this page
+  // wires letter keys to the active cell and ⌦ to backspace.
+  // ═══════════════════════════════════════════════════════
+  function initKeyboard() {
+    buildKeyboard(document.getElementById('keyboard'), {
+      onLetter(key) {
+        const n = normaliseHebrew(key);
+        if (n && cells[activeIdx]) {
+          cells[activeIdx].el.value = n;
+          cells[activeIdx].el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      },
+      onBackspace: doBackspace,
+      afterKey: focusActiveCell,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Solve / solved / hints
+  // ═══════════════════════════════════════════════════════
+  function checkSolve() {
+    const entered = cells.map(c => c.value).join('');
+    const answer = normaliseHebrew((puzzleData.answer || '').replace(/\s/g, ''));
+    if (entered === answer) {
+      showSolved();
+    } else {
+      const btn = document.getElementById('btn-solve');
+      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+      btn.addEventListener('animationend', () => btn.classList.remove('shake'), { once: true });
+    }
+  }
+
+  function showSolved() {
+    document.getElementById('puzzle-view').style.display = 'none';
+    document.getElementById('solved-view').style.display = 'block';
+    const solvedClueEl = document.getElementById('solved-clue');
+    solvedClueEl.innerHTML = '';
+    solvedClueEl.appendChild(document.createTextNode(puzzleData.clue));
+    const solvedLenSpan = document.createElement('span');
+    solvedLenSpan.className = 'clue-length';
+    solvedLenSpan.textContent = ' ' + formatLengthSpec(String(puzzleData.length).trim());
+    solvedClueEl.appendChild(solvedLenSpan);
+    const solvedAuthorLine = document.getElementById('solved-author-line');
+    if (puzzleData.author) {
+      document.getElementById('solved-author-value').textContent = puzzleData.author;
+      solvedAuthorLine.style.display = '';
+    } else {
+      solvedAuthorLine.style.display = 'none';
+    }
+    document.getElementById('solved-answer').textContent = puzzleData.answer;
+    renderSolvedDetails(document.getElementById('solved-details'),
+      puzzleData.explanation, puzzleData.hints || []);
+    document.getElementById('solved-close').onclick = () => {
+      document.getElementById('solved-view').style.display = 'none';
+      document.getElementById('puzzle-view').style.display = 'block';
+      focusActiveCell();
+    };
+  }
+
+  function openHintModal() {
+    renderHintsView();
+    openModal();
+    updateRevealButton();
+  }
+
+  function closeHintModal() {
+    closeModal();
+    focusActiveCell();
+  }
+
+  // renderHints (progressive עצה items + "נאָך עצות") lives in solver-common.js.
+  function renderHintsView() {
+    renderHints(document.getElementById('modal-body'), puzzleData.hints || [], hintState,
+      { onExhausted: updateRevealButton });
+  }
+
+  function getAnswer() {
+    return normaliseHebrew((puzzleData.answer || '').replace(/\s/g, ''));
+  }
+
+  function updateRevealButton() {
+    const btn = document.getElementById('btn-reveal');
+    if (!btn) return;
+    btn.style.display = cells.every(c => c.locked) ? 'none' : '';
+  }
+
+  function lockCell(idx, letter) {
+    const cell = cells[idx];
+    cell.value = letter;
+    cell.el.value = letter;
+    cell.locked = true;
+    cell.el.classList.add('locked');
+    cell.el.setAttribute('readonly', 'true');
+    updateSolveBtn();
+    updateRevealButton();
+  }
+
+  function advanceActiveAfterLock() {
+    if (cells[activeIdx] && cells[activeIdx].locked) {
+      for (let d = 1; d < cells.length; d++) {
+        const next = (activeIdx + d) % cells.length;
+        if (!cells[next].locked) { setActive(next); return; }
+      }
+    }
+  }
+
+  // Phase order and odd/even preference live in revealNextLetterIn
+  // (solver-common.js); this page supplies lockCell and the follow-up.
+  function revealNextLetter() {
+    const idx = revealNextLetterIn(cells, getAnswer(), lockCell);
+    if (idx < 0) return;
+    advanceActiveAfterLock();
+    if (cells.every(c => c.locked)) checkSolve();
+  }
+
+  
+  // ═══════════════════════════════════════════════════════
+  // Init puzzle
+  // ═══════════════════════════════════════════════════════
+  function initPuzzle() {
+    // Clear clue element from any previous puzzle
+    const clueEl = document.getElementById('clue-text');
+    clueEl.innerHTML = '';
+    clueEl.appendChild(document.createTextNode(puzzleData.clue));
+    const lenSpan = document.createElement('span');
+    lenSpan.className = 'clue-length';
+    lenSpan.textContent = ' ' + formatLengthSpec(String(puzzleData.length).trim());
+    clueEl.appendChild(lenSpan);
+    const authorLine = document.getElementById('author-line');
+    if (puzzleData.author) {
+      document.getElementById('author-value').textContent = puzzleData.author;
+      authorLine.style.display = '';
+    } else {
+      authorLine.style.display = 'none';
+    }
+
+    buildGrid(puzzleData.length);
+    initKeyboard();
+
+    // Buttons are fresh from the template clone, so listeners attach directly.
+    document.getElementById('btn-solve').addEventListener('click', checkSolve);
+
+    const hintBtn = document.getElementById('btn-hint');
+    hintBtn.style.display = (puzzleData.hints || []).length > 0 ? '' : 'none';
+    hintBtn.addEventListener('click', openHintModal);
+
+    document.getElementById('modal-close').onclick = closeHintModal;
+    document.getElementById('modal-overlay').onclick = e => { if (e.target === e.currentTarget) closeHintModal(); };
+
+    // Reveal button — only shown after all provided hints are used
+    const revealBtn = document.getElementById('btn-reveal');
+    revealBtn.onclick = () => { revealNextLetter(); };
+    updateRevealButton();
+
+    focusActiveCell();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (isModalOpen()) { closeHintModal(); return; }
+    if (document.body.classList.contains('embed')) window.parent.postMessage('solver-escape', '*');
+  });
+
+  function goToCreate() { go({ create: true }); }
+  document.getElementById('header-edit-btn').addEventListener('click', goToCreate);
+  document.getElementById('header-edit-btn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    goToCreate();
+  }, { passive: false });
+
+  // Browser Back/Forward and every go() call land here.
+  window.addEventListener('hashchange', reboot);
+
+  boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="yi" dir="rtl">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZYQZ5BWE0V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZYQZ5BWE0V');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>קעסטל־רעטעניש מיט חזקי פֿישער</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@300;400;500;600;700&family=Iosevka+Charon+Mono&family=Noto+Sans+Symbols+2&family=Noto+Sans+JP&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="solver-common.css" />
+  <style>
+    /* Shared base/card/cell/button/keyboard/modal styles live in
+       solver-common.css; only styles specific to this page are here. */
+
+    /* ── The crossword grid ──
+       The page is dir=rtl, and CSS grid auto-placement follows the writing
+       direction, so emitting cells row by row in ascending JSON column order
+       lands col 0 rightmost — the same convention as grid.json. */
+    .cw-grid {
+      display: grid;
+      position: relative;
+      grid-template-columns: repeat(var(--cols), var(--cell-size));
+      grid-auto-rows: var(--cell-size);
+      justify-content: center;
+      --cell-size: min(2.3rem, calc((100vw - 3.5rem) / var(--cols)));
+      margin-bottom: 1.6rem;
+      user-select: none;
+    }
+    /* Snap the cell to a whole pixel where round() exists: buildGridLines()
+       lays lines out at integer multiples of a rounded cell width, so a
+       fractional track would let the two drift apart across the grid.
+       Gated behind @supports rather than written as a plain fallback pair,
+       because a custom property parses as any token stream — an older engine
+       would happily accept an unknown round() and only fail later, inside
+       grid-template-columns, collapsing the whole grid to a single column.
+       Without round() the cells stay fractional, so the lines drift off them
+       by the rounding error per column (~5px across 14 at 2.3rem) — degraded,
+       but the grid still builds and stays playable. */
+    @supports (width: round(down, 1px, 1px)) {
+      .cw-grid {
+        --cell-size: round(down, min(2.3rem, calc((100vw - 3.5rem) / var(--cols))), 1px);
+      }
+    }
+    /* Structural grid lines are drawn once as a single SVG path (see
+       buildGridLines()) rather than as per-cell borders. Two adjacent
+       cells' borders are independent boxes that Chromium can rasterize
+       a device pixel apart even at identical integer coordinates — an
+       inherent limit of per-element hairline borders, not fixable by
+       sizing alone. A single path painted in one pass has no such seam.
+       Positioned absolutely (not a grid item — a spanning grid item
+       reserves every cell and pushes the 224 auto-placed .cw-cells into
+       new rows past it) with its offset computed in JS, because when the
+       grid is wider than its centered card (common: fixed-px tracks vs.
+       a max-width container), .cw-grid's own box sits narrower than its
+       rendered tracks and left:0 here would misalign against them. */
+    /* overflow:visible — a 1px stroke is centered on its path, so the
+       outermost lines (running exactly along x=0/width, y=0/height) would
+       otherwise have half their width clipped by the SVG viewport,
+       rendering thinner than every interior line. */
+    .cw-lines { position: absolute; pointer-events: none; overflow: visible; }
+    .cw-cell { position: relative; }
+    .cw-cell.cw-block { background: #3a3a3a; }
+    .cw-cell .cell {
+      width: 100%; height: 100%;
+      border-width: 0;
+      font-size: calc(var(--cell-size) * 0.55);
+      padding-top: calc(var(--cell-size) * 0.16);
+    }
+    .cw-cell .cell.word-hl { background: #f6ecd4; }
+    .cw-cell .cell.wrong { color: #a01818; background: #fbe9e9; }
+    .cw-num {
+      position: absolute; top: 0; right: 2px;
+      font-size: calc(var(--cell-size) * 0.28);
+      color: #9a7840; pointer-events: none; z-index: 2; line-height: 1.4;
+    }
+
+    /* ── Current-clue display ──
+       All clues are stacked in the same grid area, invisible except the
+       active one, so the box is always as tall as the LONGEST clue and the
+       page never shifts when the selection changes. */
+    .current-clue { display: grid; margin-bottom: 1rem; }
+    .current-clue .cur-item {
+      grid-area: 1 / 1; visibility: hidden;
+      text-align: center; font-size: 1rem; line-height: 1.6; color: #1a1209;
+      align-self: center;
+    }
+    .current-clue .cur-item.visible { visibility: visible; }
+    .cur-num { font-weight: 600; color: #5a3e1b; }
+    .cur-dir { color: #9a7840; font-size: 0.85em; }
+    .cur-key-btn {
+      display: none; color: #c4963a; font-size: 1rem;
+      padding: 0 0.2rem; vertical-align: middle; border-radius: 3px;
+      transition: background 0.1s;
+    }
+    .cur-item.solved .cur-key-btn { display: inline-block; }
+    .cur-key-btn:hover { background: #f3ede0; }
+
+    /* ── Clue lists ── */
+    .clue-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.5rem; margin-top: 1.6rem; }
+    @media (max-width: 540px) { .clue-lists { grid-template-columns: 1fr; } }
+    .clue-sect-title {
+      font-size: 1rem; font-weight: 600; color: #5a3e1b;
+      margin-bottom: 0.6rem; padding-bottom: 0.4rem;
+      border-bottom: 1px solid #e4d8be; letter-spacing: 0.02em;
+    }
+    .clue-sect { margin-bottom: 1rem; }
+    .gclue {
+      display: flex; align-items: baseline; gap: 0.4rem;
+      padding: 0.45rem 0.3rem; border-bottom: 1px solid #f0e8d5;
+      font-size: 0.95rem; line-height: 1.55; cursor: pointer;
+      border-radius: 2px; transition: background 0.1s;
+    }
+    .gclue:hover { background: #f7f0dd; }
+    .gclue.active { background: #fdefc8; }
+    .gclue-num { font-weight: 600; color: #5a3e1b; flex-shrink: 0; }
+    .gclue-len { color: #7a6040; font-weight: 300; }
+    .gclue.solved { color: #9a8560; }
+    .gclue.solved .gclue-num { color: #9a8560; }
+    .gclue-exp-btn {
+      flex-shrink: 0; margin-right: auto; align-self: center;
+      color: #c4963a; font-size: 1rem; padding: 0 0.2rem;
+      display: none; border-radius: 3px; transition: background 0.1s;
+    }
+    .gclue.solved .gclue-exp-btn { display: block; }
+    .gclue-exp-btn:hover { background: #f3ede0; }
+
+    /* (.solved-banner and the explanation/hints detail styles are shared —
+       see solver-common.css) */
+    .modal-body .solved-banner { text-align: center; margin-top: 0.5rem; }
+
+    /* ── Confirm dialog buttons ── */
+    .confirm-text { font-size: 1rem; line-height: 1.7; margin-bottom: 1.2rem; }
+    .confirm-actions { display: flex; justify-content: center; gap: 0.75rem; }
+
+    .btn-row { flex-wrap: wrap; align-items: center; }
+
+    .btn-clear {
+      font-size: 0.85rem; color: #8a2020; border: 1.5px dashed #c09090;
+      border-radius: 3px; padding: 0.4rem 0.9rem;
+      background: transparent; transition: background 0.1s; white-space: nowrap;
+    }
+    .btn-clear:hover { background: #f8ecec; }
+
+    /* ── Check menu (dropdown replacing the two check buttons) ── */
+    .menu-wrap { position: relative; }
+    .menu-caret {
+      display: inline-block; font-size: 1.2em; margin-right: 0.2rem;
+      transition: transform 0.15s;
+    }
+    #btn-check-menu.open .menu-caret { transform: rotate(180deg); }
+    .menu-dropdown {
+      position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 20;
+      background: #fffdf7; border: 1px solid #d4c4a0; border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(43,29,8,0.18);
+      width: max-content; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.15rem;
+    }
+    .menu-dropdown.hidden { display: none; }
+    .menu-item {
+      font-family: inherit; font-size: 0.95rem; color: #2b1d08; text-align: right;
+      padding: 0.55rem 0.7rem; border-radius: 4px; background: transparent; border: none;
+      cursor: pointer; transition: background 0.1s; white-space: nowrap;
+    }
+    .menu-item:hover { background: #f3ede0; }
+    .menu-item-toggle { display: flex; align-items: center; gap: 0.35rem; }
+    /* Icon column always reserves its width, so the label doesn't shift
+       left/right as the toggle switches on and off. */
+    .menu-check-icon { width: 1em; text-align: center; color: #5a3e1b; visibility: hidden; }
+    .menu-item-toggle.on .menu-check-icon { visibility: visible; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <span class="ornament">✦</span>
+  <h1>קעסטל־רעטעניש מיט חזקי פֿישער</h1>
+</header>
+
+<main class="card">
+  <div class="cw-grid" id="cw-grid"></div>
+  <div class="btn-row">
+    <div class="menu-wrap">
+      <button class="btn-primary" id="btn-check-menu">טשעק <span class="menu-caret sym-x">▾</span></button>
+      <div class="menu-dropdown hidden" id="check-menu">
+        <button class="menu-item" id="btn-check-word">דאָס וואָרט</button>
+        <button class="menu-item" id="btn-check-all">אַלעס</button>
+        <button class="menu-item menu-item-toggle" id="btn-auto-check">
+          <span>אייביק</span>
+          <span class="menu-check-icon"><i class="ti ti-check"></i></span>
+        </button>
+      </div>
+    </div>
+    <button class="btn-secondary" id="btn-hint">הילף</button>
+    <button class="btn-reveal" id="btn-reveal" style="display:none">אַנטפּלעק אַן אות</button>
+    <button class="btn-clear" id="btn-clear">מעק אויס אַלעס</button>
+  </div>
+  <div class="kb-divider"></div>
+  <div class="current-clue" id="current-clue"></div>
+  <div class="keyboard" id="keyboard"></div>
+  <div class="clue-lists">
+    <div class="clue-sect">
+      <div class="clue-sect-title">געלייגט <span class="cur-dir sym-x">←</span></div>
+      <div id="clues-across"></div>
+    </div>
+    <div class="clue-sect">
+      <div class="clue-sect-title">שטייענדיק <span class="cur-dir sym-x">↓</span></div>
+      <div id="clues-down"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Shared modal (explanations, confirm-clear, solved banner) -->
+<div class="modal-overlay hidden" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" id="modal-close" aria-label="שליסן"><span class="sym-x">✕</span></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>const _pgd = "eyJyb3dzIjoxNiwiY29scyI6MTQsIm5vdGUiOiJjb2wgMCBpcyB0aGUgUklHSFRNT1NUIGNvbHVtbjsgYWNyb3NzIHdvcmRzIHJlYWQgcmlnaHQtdG8tbGVmdCIsImNlbGxzIjpbeyJyb3ciOjAsImNvbCI6MiwibGV0dGVyIjoi16IifSx7InJvdyI6MCwiY29sIjozLCJsZXR0ZXIiOiLXoCJ9LHsicm93IjowLCJjb2wiOjQsImxldHRlciI6IteSIn0seyJyb3ciOjAsImNvbCI6NSwibGV0dGVyIjoi16IifSx7InJvdyI6MCwiY29sIjo2LCJsZXR0ZXIiOiLXkSJ9LHsicm93IjowLCJjb2wiOjcsImxldHRlciI6IteiIn0seyJyb3ciOjAsImNvbCI6OCwibGV0dGVyIjoi16AifSx7InJvdyI6MCwiY29sIjo5LCJsZXR0ZXIiOiLXkiJ9LHsicm93IjowLCJjb2wiOjEwLCJsZXR0ZXIiOiLXoiJ9LHsicm93IjoxLCJjb2wiOjQsImxldHRlciI6IteRIn0seyJyb3ciOjEsImNvbCI6OSwibGV0dGVyIjoi16IifSx7InJvdyI6MiwiY29sIjoxLCJsZXR0ZXIiOiLXkSJ9LHsicm93IjoyLCJjb2wiOjQsImxldHRlciI6IteQIn0seyJyb3ciOjIsImNvbCI6OCwibGV0dGVyIjoi15AifSx7InJvdyI6MiwiY29sIjo5LCJsZXR0ZXIiOiLXnCJ9LHsicm93IjoyLCJjb2wiOjEwLCJsZXR0ZXIiOiLXpCJ9LHsicm93IjoyLCJjb2wiOjExLCJsZXR0ZXIiOiLXkSJ9LHsicm93IjoyLCJjb2wiOjEyLCJsZXR0ZXIiOiLXmSJ9LHsicm93IjoyLCJjb2wiOjEzLCJsZXR0ZXIiOiLXqiJ9LHsicm93IjozLCJjb2wiOjAsImxldHRlciI6IteSIn0seyJyb3ciOjMsImNvbCI6MSwibGV0dGVyIjoi15AifSx7InJvdyI6MywiY29sIjoyLCJsZXR0ZXIiOiLXoCJ9LHsicm93IjozLCJjb2wiOjMsImxldHRlciI6IteTIn0seyJyb3ciOjMsImNvbCI6NCwibGV0dGVyIjoi15kifSx7InJvdyI6MywiY29sIjo5LCJsZXR0ZXIiOiLXmCJ9LHsicm93IjozLCJjb2wiOjEyLCJsZXR0ZXIiOiLXlCJ9LHsicm93Ijo0LCJjb2wiOjEsImxldHRlciI6IteoIn0seyJyb3ciOjQsImNvbCI6OCwibGV0dGVyIjoi16cifSx7InJvdyI6NCwiY29sIjoxMCwibGV0dGVyIjoi16kifSx7InJvdyI6NCwiY29sIjoxMiwibGV0dGVyIjoi15kifSx7InJvdyI6NSwiY29sIjoxLCJsZXR0ZXIiOiLXkyJ9LHsicm93Ijo1LCJjb2wiOjcsImxldHRlciI6ItegIn0seyJyb3ciOjUsImNvbCI6OCwibGV0dGVyIjoi15AifSx7InJvdyI6NSwiY29sIjo5LCJsZXR0ZXIiOiLXmyJ9LHsicm93Ijo1LCJjb2wiOjEwLCJsZXR0ZXIiOiLXmCJ9LHsicm93Ijo1LCJjb2wiOjExLCJsZXR0ZXIiOiLXniJ9LHsicm93Ijo1LCJjb2wiOjEyLCJsZXR0ZXIiOiLXkCJ9LHsicm93Ijo1LCJjb2wiOjEzLCJsZXR0ZXIiOiLXnCJ9LHsicm93Ijo2LCJjb2wiOjMsImxldHRlciI6ItenIn0seyJyb3ciOjYsImNvbCI6NSwibGV0dGVyIjoi15YifSx7InJvdyI6NiwiY29sIjo4LCJsZXR0ZXIiOiLXlSJ9LHsicm93Ijo2LCJjb2wiOjEwLCJsZXR0ZXIiOiLXkCJ9LHsicm93Ijo2LCJjb2wiOjEyLCJsZXR0ZXIiOiLXlSJ9LHsicm93Ijo3LCJjb2wiOjIsImxldHRlciI6IteZIn0seyJyb3ciOjcsImNvbCI6MywibGV0dGVyIjoi15kifSx7InJvdyI6NywiY29sIjo0LCJsZXR0ZXIiOiLXkyJ9LHsicm93Ijo3LCJjb2wiOjUsImxldHRlciI6IteZIn0seyJyb3ciOjcsImNvbCI6NiwibGV0dGVyIjoi16kifSx7InJvdyI6NywiY29sIjo3LCJsZXR0ZXIiOiLXlSJ9LHsicm93Ijo3LCJjb2wiOjgsImxldHRlciI6IteVIn0seyJyb3ciOjcsImNvbCI6OSwibGV0dGVyIjoi15AifSx7InJvdyI6NywiY29sIjoxMCwibGV0dGVyIjoi15sifSx7InJvdyI6NywiY29sIjoxMiwibGV0dGVyIjoi16gifSx7InJvdyI6OCwiY29sIjozLCJsZXR0ZXIiOiLXoCJ9LHsicm93Ijo4LCJjb2wiOjUsImxldHRlciI6ItebIn0seyJyb3ciOjgsImNvbCI6OCwibGV0dGVyIjoi16IifSx7InJvdyI6OSwiY29sIjoxLCJsZXR0ZXIiOiLXniJ9LHsicm93Ijo5LCJjb2wiOjMsImxldHRlciI6IteQIn0seyJyb3ciOjksImNvbCI6NSwibGV0dGVyIjoi16IifSx7InJvdyI6MTAsImNvbCI6MCwibGV0dGVyIjoi16kifSx7InJvdyI6MTAsImNvbCI6MSwibGV0dGVyIjoi15UifSx7InJvdyI6MTAsImNvbCI6MiwibGV0dGVyIjoi16gifSx7InJvdyI6MTAsImNvbCI6MywibGV0dGVyIjoi15QifSx7InJvdyI6MTAsImNvbCI6NCwibGV0dGVyIjoi15EifSx7InJvdyI6MTAsImNvbCI6NSwibGV0dGVyIjoi16gifSx7InJvdyI6MTEsImNvbCI6MSwibGV0dGVyIjoi16gifSx7InJvdyI6MTEsImNvbCI6NCwibGV0dGVyIjoi15wifSx7InJvdyI6MTIsImNvbCI6MSwibGV0dGVyIjoi15MifSx7InJvdyI6MTIsImNvbCI6MywibGV0dGVyIjoi16cifSx7InJvdyI6MTIsImNvbCI6NCwibGV0dGVyIjoi16IifSx7InJvdyI6MTIsImNvbCI6NSwibGV0dGVyIjoi16gifSx7InJvdyI6MTIsImNvbCI6NiwibGV0dGVyIjoi15gifSx7InJvdyI6MTMsImNvbCI6NCwibGV0dGVyIjoi16gifSx7InJvdyI6MTMsImNvbCI6NiwibGV0dGVyIjoi15AifSx7InJvdyI6MTQsImNvbCI6NiwibGV0dGVyIjoi15MifSx7InJvdyI6MTUsImNvbCI6NCwibGV0dGVyIjoi16QifSx7InJvdyI6MTUsImNvbCI6NSwibGV0dGVyIjoi15wifSx7InJvdyI6MTUsImNvbCI6NiwibGV0dGVyIjoi15AifSx7InJvdyI6MTUsImNvbCI6NywibGV0dGVyIjoi16YifV0sInBsYWNlbWVudHMiOlt7Im51bWJlciI6MSwiZGlyZWN0aW9uIjoiYWNyb3NzIiwid29yZCI6Itei16DXkteiINeR16LXoNeS16IiLCJlbnRyeSI6Itei16DXktei15HXoteg15LXoiIsImNsdWUiOiLXke+sn9ehIO+srteo76yf158g15DXmdefINee76yv15LXoteo16IsINee76yv15LXoteo16Ig16DXkNa316jXmdep16fXmdeZ15jXnyIsImV4cGxhbmF0aW9uIjoi76yu158g76yu16DXk9ei16jXoiDXsO+sr9eo15gg762O76yu16gg17TXnu+sr9eS16LXqNei17Qg15DXmdeWINe016LXoNeS16LXtCwg17DXoteo15gg17TXnu+sr9eS16LXqNeiINee76yv15LXoteo16LXtCDXtNei16DXkteiINei16DXktei17QuINeR76yf16Eg17DXoteo15gg15PXmSDXkNeV16og15EuIO+srteWINee16LXnyDXnNey15LXmCDXtNeR17Qg76yu16jvrJ/XnyDXkNeZ158g17TXoteg15LXoiDXoteg15LXote0INeR76yu16fXldee15gg157XotefINe016LXoNeS16Ig15HXoteg15LXote0INew76yv16Eg15DXmdeWINeg15DWt9eo15nXqden15nXmdeY158uIiwiaGludHMiOlsi17TXnteQ1rjXktei16jXoiwg157XkNa415LXoteo16LXtCDXkNeZ15Yg16nXmNeQ1rjXoy4iLCLXntei158g15PvrK7XqNejINeR17LXmNefINeT16LXnSDXsO+sr9eo15gg17TXnteQ1rjXktei16jXote0IO+tju+srteoIO+sriDXodeZ16DvrK/XoNeZ150uIiwi17TXke+sn9eh17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINeR15nXmdeY158g15PXotedINew76yv16jXmCDXtNeR76yf16HXtCDvrY7vrK7XqCDXou+thNei16Eg76yu16DXk9ei16jXqS4iLCLXtNeQ1rfXqNey1rfXnyDXkNeZ15/XtCDXkNeZ15Yg15DWtyDXsNei15LXsO+sn9eW16LXqC4iLCLXotehINeQ15nXliDvrK4g16fXkNa316HXmNef1r7XsNei15LXsNey1rfXltei16guIiwi157XotefINeT76yu16jXoyDXnNey15LXnyDXk9eZINeR17LXmNeV16DXkiDvrY7XldefINe015HvrJ/Xode0INeQ15nXoNei15XXldeZ15nXoNeZ16cg762O15XXnyDXk9eZINeR17LXmNeV16DXkiDvrY7XldefICDXtNee15DWuNeS16LXqNeiLCDXnteQ1rjXktei16jXote0LiIsIte016DXkNa316jXmdep16fXmdeZ15jXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjAsImNvbCI6Mn0seyJudW1iZXIiOjIsImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi15LXkdeQ15kiLCJlbnRyeSI6IteS15HXkNeZIiwiY2x1ZSI6IteT16jXmdeZINeW15nXmiDXkNa316jXldedINeZ76yd15PXotec16IgMda+Mta+Mywg15DXldefINeU16LXnO+tjteYIO+srteo17HXoSDXkNeZ158g16nXldecISIsImV4cGxhbmF0aW9uIjoi15nvrJ3Xk9ei15zXoiDXkNeZ15Yg17TXmde0LiAx1r4y1r4zINeQ15nXliDXtNeQ1r7Xkda+15LXtC4g16bXldeW76yu157XotefINee76yu15vXmCDXotehINe015nXkNeR15LXtC4g15PXqNeyINeW15nXmiDvrK7XqNeV150g17TXmdeQ15HXkte0INem15Ug17DXoteo158g17TXkteR15DXmde0INew76yv16Eg15TXotec762O15gg76yu16jXsdehINeQ15nXnyDXqdeV15wuIiwiaGludHMiOlsi17TXmdeZ1rTXk9ei15zXote0INeQ15nXliDXqdeY76yv16MuIiwi157XotefINeT76yu16jXoyDXotehINeR17LXmNefIO+tju+srteoINei762E16LXoSDvrK7XoNeT16LXqNepLiIsIte0Mda+Mta+M9e0INeQ15nXliDXqdeY76yv16MuIiwi157XotefINeT76yu16jXoyDXmdei15PXoiDXoNeV157XoteoINeR17LXmNefIO+tju+srteoINei762E16LXoSDvrY7XldefIO+sriDXke+srten76yu16DXmNeiINeh15PXqC4iLCLXtNeT16jXmdeZINeW15nXmiDXkNa316jXlded17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNeZ15HXoteo15PXqNey1r7XsNei15LXsNey1rfXltei16guIiwi17TXlNei15zXpNa/15gg15DWt9eo17HXoSDXkNeZ158g16nXldec17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0sInJvdyI6MCwiY29sIjo0fSx7Im51bWJlciI6MywiZGlyZWN0aW9uIjoiZG93biIsIndvcmQiOiLXktei15zXmCIsImVudHJ5Ijoi15LXotec15giLCJjbHVlIjoi15DWtyDXkdeZ16HXnCDXktei15zigKYg15jXldeg16fXnNa+15LXqNeZ15/igKYiLCJleHBsYW5hdGlvbiI6Iu+sriDXkdeZ16HXnCDvrY7XldefINe015LXotecINeY15XXoNen15zXtCDXkNeZ15Yg15LXotec15gg17DvrK/XoSDXkNeZ15Yg15LXqNeZ158uIiwiaGludHMiOlsi17TXkNa3INeR15nXodec17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rcg15HXkNa315TXkNa315zXmNef1r7XsNei15LXsNey1rfXltei16guIiwi17TXktei15wg15jXldeg16fXnNe0INeQ15nXliDXqdeY15DWuNejLiIsIte015LXqNeZ15/XtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93IjowLCJjb2wiOjl9LHsibnVtYmVyIjo0LCJkaXJlY3Rpb24iOiJkb3duIiwid29yZCI6IteR76yv16jXkyIsImVudHJ5Ijoi15HXkNeo15MiLCJjbHVlIjoi76yu15PXqNeR15AsIO+sriDXnu+sr9ecINeT76yu16jXoyDvrK4g16jXkda/INeU76yv16giLCJleHBsYW5hdGlvbiI6Ite076yuINee76yv15zXtCDXlNey16HXmCDXoNeZ16nXmCDXmdei15PXoiDXkNeV16ouINeQ762O16nXqCDXmdei15PXoiDvrK7XoNeT16LXqNeiINeQ15XXqj8g15nXoteT16Ig76yu16DXk9ei16jXoiDXkNeV16og762O15XXnyDXtNeT76yu16jXoyDvrK4g16jXkda/17Qg15DXmdeWINe015PXqNeQ15HXtC4g17TvrK7Xk9eo15HXkNe0INee17LXoNeYIO+tju+srteo16fXoteo15guINeQ17HXkSDXntei158g15zXstei16DXmCDXtNeT16jXkNeR17Qg762O76yu16jXp9ei16jXmCDXlO+sr9eYINee16LXnyDXtNeR76yv16jXk9e0INew76yv16Eg15DXmdeWINeU76yv16guIiwiaGludHMiOlsi17TXkNa3INee15DWuNec17Qg15DXmdeWIO+sriDXsNei15LXsO+sn9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXsdeh16fXnNey1rfXkdei16jWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeT15DWt9eo16Mg15DWtyDXqNeR1r/XtCDXkNeZ15Yg16nXmO+sr9ejLiIsIte015Ag157vrK/XnNe0ICDXntey16DXmCDvrK7XliDXoNeZ16nXmCDXqdeY16LXoNeT15nXpywg16DXmdep15gg15nXoteT16LXoSDXkNeV16ouIiwi17TXkNa315PXqNeR15DXtCDXnu+sn9eg15gg762O76yu16jXp9ei16jXmC4iLCLXotehINeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg15DWt9efINeQ15nXkdei16jXk9eo17LWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeU15DWuNeo17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0sInJvdyI6MiwiY29sIjoxfSx7Im51bWJlciI6NSwiZGlyZWN0aW9uIjoiYWNyb3NzIiwid29yZCI6IteQ15zXo9a+15HXmdeqIiwiZW50cnkiOiLXkNec16TXkdeZ16oiLCJjbHVlIjoi15zXldeZ16Mg15DXmdeg15PXqNeV15nXodefISDvrK4g15nvrJ3XkyDXk9eo16nXoNeYINeg76yv15og15DXmdefINec16nXldefINen15XXk9epINeQ15nXoNei15XXldeZ15nXoNeZ16csIO+tjteV158g76yv16DXlNeZ15nXkSDXkdeZ15bXnyDXodeV16Mg15XXle+sr9ehINeQ15nXliDXktei16nXqNeZ15HXnyDXkNeZ158g15PXmSDXoe+tjteoIO+titeV16jXlCIsImV4cGxhbmF0aW9uIjoi17TXnNeV15nXo9e0INeQ15nXoNeT16jXldeZ16HXnyDXnu+srteb15gg17TXnO+tjte0LiDXtO+sriDXme+sndeTINeT16jXqdeg15jXtCDXlNey16HXmCDXou+thNei16Eg17DvrK/XoSDXp9ec15nXoNeS15gg17DXmSDXtNeZ76yd15PXtCDXsO+sr9ehINen16LXnyDXltey158g15PXmSDXkNeV16og15kuIO+sr9eR16LXqCDXk9ei150g15kg15zXsteS15gg157XotefINeg76yv15og17TXkNeZ158g15zXqdeV158g16fXldeT16nXtC4g17TXkNeZ15/XtCDXkNex16Mg15zXqdeV158g16fXldeT16kg15DXmdeWINeT15kg15DXldeqINeRLiDXnNey15LXmCDXntei158g15kg16DvrK/XmiDXkS4g15HXmdeWINeZ16LXpteYINeU76yv15gg157XotefINe015zvrY7XkdeZ17QuINee16LXnyDXnNey15LXmCDXk++sr9ehINeQ15nXoNei15XXldeZ15nXoNeZ16cg17TvrY7XldefIO+sr9eg15TXmdeZ15Eg15HXmdeW158g16HXldej17QsINeT76yv16Eg15TXsteh15gg17TXkNeq17QsINeT15kg16LXqNep15jXoiDXkNex16Eg16bXldedINec16LXpteY158uINeQ15XXnyDvrK7XliDXntei158g15zXsteS15gg17TXnO+tjteR15nXtCDXkNeZ158g17TXkNeq17Qg15HvrK7Xp9eV157XmCDXntei158g17TXkNec16PWvteR15nXqte0INeV15XvrK/XoSDXkNeZ15Yg15LXotep16jXmdeR158g15DXmdefINeT15kg16HvrY7XqCDvrYrXldeo15QuIiwiaGludHMiOlsi17TXkNeZ16DXk9eo15XXmdeh15/XtCDXkNeZ15Yg76yuINew16LXktew76yf15bXoteoLiIsItei16Eg15DXmdeWIO+srtefINeQ17HXoden15zXsta315HXoteo1r7XsNei15LXsNey1rfXltei16guIiwi17TXnNex16PXtCDXkNeZ15Yg16nXmO+sr9ejLiIsIte015PXqNep16DXmNe0INeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg76yuINeU15DWuNee15DWuNek1r/XkNa415/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtCDvrK4g15nvrJ3Xk9e0INeQ15nXliDXqdeY76yv16MuIiwi17TXkNeZ158g15zXqdeV158g16fXldeT16nXtCDXntey16DXmCDXk9eZINew76yv16jXmCDXtNeQ15nXn9e0INeS16LXlu+sr9eS15gg15DXmdefINec16nXldefINen15nXk++sqy4iLCLXtNeg76yv15rXtCDXntey16DXmCDXpteVINeY15XXmdep158g15PXmSDXodeT16gg15DXldefINec17LXktei158g16LvrYTXotehINeg76yv15og16LvrYTXotehIO+srteg15PXoteo16kuIiwi17TvrY7XldefIO+sr9eg15TXmdeZ15Eg15HXmdeW158g16HXldej17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINei16Eg15HXsteY158g762O76yu16gg16LvrYTXotehINew76yv16Eg15DXmdeWIO+tjteV158g76yv16DXlNey15Eg15HXmdeW158g16HXldejLiIsIte015DXmdeg16LXldeV15nXmdeg15nXp9e0INeQ15nXliDvrK4g17DXoteS17DXsteW16LXqC4iLCLXotehINeQ15nXliDvrK4g16fXkNa316HXmNef1r7XsNei15LXsNey1rfXltei16guIiwi17TXsNeQ1rjXoSDXkNeZ15Yg15LXotep16jXmdeR158g15DXmdefINeT15kg16HXpNa/16gg16rWvNeV16jXlNe0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjIsImNvbCI6OH0seyJudW1iZXIiOjYsImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi15nXlNeZINeQ15XXqCIsImVudHJ5Ijoi15nXlNeZ15DXldeoIiwiY2x1ZSI6IteR16jXkNep15nXqjog15nXoteT158g15TXstec15nXp9efINeZ15nWtNeT16Eg15DXldeZ16LXqCDXlNei16jXmCDXkteQ1rjXmNehINeR76yu762O16LXnCIsImV4cGxhbmF0aW9uIjoi17TXkdeo15DXqdeZ16rXtCwg762O15XXnyDvrK/XoNeU17LXkSDvrY7XldefINe015nXoteT158g15TXstec15nXp9efINeZ15nWtNeT16HXtCDXkNeZ15Yg17TXmdeU15nXtC4g17TXkNex16LXqNe0INeU16LXqNeYINee17LXoNeYINee16LXnyDXlteV15vXmCDvrK4g17DvrK/XqNeYINew76yv16Eg16fXnNeZ16DXkteYINew15kg17TXkNex16LXqNe0IO+srteW17Eg17DXmSDXtNeQ15XXqNe0LiDXtNeZ15TXmSDXkNeV16jXtCDXkNeZ15Yg15LXkNa415gn16Eg15HvrK7vrY7XotecLiIsImhpbnRzIjpbIte015HXqNeQ16nXmdeq17Qg157Xsteg15gg17TXkNeZ158g76yv16DXlNey15HXtC4iLCLXtNeR16jXkNep15nXqte0INeQ15nXliDXkCDXsNei15LXsNey1rfXltei16guIiwi17TXkdeo15DXqdeZ16rXtCDXkNeZ15Yg15DWt9efINeQ17HXoden15zXsta315HXoteo1r7XsNei15LXsNey1rfXltei16guIiwi17TXmdei15PXnyDXlNey15zXmden158g15nXmda015PXode0INeQ15nXliDXqdeY76yv16MuIiwi17TXlNei16jXmNe0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3INeU15DWuNee15DWuNek1r/XkNa415/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtNeQ17HXoteo17Qg15DXmdeWINep15jvrK/Xoy4iLCLXtNeS15DWuNeY16Eg15HXkNa316TWv9ei15zXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93IjoyLCJjb2wiOjEyfSx7Im51bWJlciI6NywiZGlyZWN0aW9uIjoiYWNyb3NzIiwid29yZCI6IteS76yu16DXk9eZIiwiZW50cnkiOiLXkteQ16DXk9eZIiwiY2x1ZSI6IteQ1rcg16DXkteZ15Mg15TvrK/XmCDXlteZ15og16bXotee15nXqdeYINeQ15XXnyDXoteoINeU15DWuNeYINeS16LXlteQ1rjXkteYINem1rXXkNeq1rDXm9a2150g15zWsNep1rjXgdec15XWudedINeQ15XXmdejINei16DXktec15nXqSIsImV4cGxhbmF0aW9uIjoi157XmdepINeQ17HXoSDXtNeQ1rcg16DXkteZ15PXtCDXpteVINee76yu15vXnyDXtNeS76yu16DXk9eZ17Qg17DvrK/XoSDXlO+sr9eYINeS16LXlu+sr9eS15gg16bWtdeQ16rWsNeb1rbXnSDXnNaw16nWuNeB15zXlda5150g15DXldeZ16Mg16LXoNeS15zXmdepLiIsImhpbnRzIjpbIte015TvrK/XmCDXlteZ15og16bXotee15nXqdeY17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNeg15DXkteo15DWt9ed1r7XsNei15LXsNey1rfXltei16guIiwi17TXkNa3INeg15LXmdeT17Qg15DXmdeWINep15jXkNa416MuIiwi17TXoteoINeU15DWuNeYINeS16LXlteQ1rjXkteYINem1rXXkNeq1rDXm9a2150g15zWsNep1rjXgdec15XWudedINeQ15XXmdejINei16DXktec15nXqde0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjMsImNvbCI6MH0seyJudW1iZXIiOjgsImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi16fvrK7XsNeiIiwiZW50cnkiOiLXp9eQ15XXldeiIiwiY2x1ZSI6Itei16Eg15LXmdeR15gg15vWvNeV15cg15DWt9ew16LXp9em15XXnNex16TWv9efIiwiZXhwbGFuYXRpb24iOiLXtO+srtew16LXp9e0INeT76yu16jXoyDXnNex762O158g16bXlSDXldeV16LXqNefINe016fvrK7XsNei17Qg17DvrK/XoSDXkteZ15HXmCDXm9a815XXly4iLCJoaW50cyI6WyLXtNem15Ug15zXsdek1r/Xn9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXoNeQ15LXqNeQ1rfXnda+17DXoteS17DXsta315bXoteoLiIsIte015DWt9ew16LXp9e0INeQ15nXliDXqdeY15DWuNejLiIsIte016LXoSDXkteZ15HXmCDXm9a815XXl9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjQsImNvbCI6OH0seyJudW1iZXIiOjksImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi16nXmO+sr9eaIiwiZW50cnkiOiLXqdeY15DXmyIsImNsdWUiOiLXm++sr9eY16kg16bXldeo15nXp9a+16DXmdeZ16LXnyDvrK7XkdeZ16HXnCIsImV4cGxhbmF0aW9uIjoi17TXm++sr9eY16nXtCDXpteV16jXmdenLCDXk++sr9ehINeU17LXodeYINew16LXnyDXntei158g15zXstei16DXmCDXtNeb76yv15jXqde0IO+tjteV158g15zXmdeg16fXoSDXkNex16Mg16jXoteb15jXoSDXsNei16jXmCDXotehINe016nXmO+sr9ea17Qg17DvrK/XoSDXkNeZ15Yg76yu15HXmdeh15wg16DXstei158uIiwiaGludHMiOlsi17TXpteV16jXmden17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNeZ15HXoteo15PXqNey1r7XsNei15LXsNey1rfXltei16guIiwi17TXm9eQ1rjXmNep17Qg15DXmdeWINep15jXkNa416MuIiwi17TXoNeZ15nXotefINeQ1rfXkdeZ16HXnNe0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjQsImNvbCI6MTB9LHsibnVtYmVyIjoxMCwiZGlyZWN0aW9uIjoiYWNyb3NzIiwid29yZCI6Iteg15DXm9eY157XkNecIiwiZW50cnkiOiLXoNeQ15vXmNee15DXnCIsImNsdWUiOiLigaY5IC0gMSArIDggeCDXoteh15/igakiLCJleHBsYW5hdGlvbiI6Iteg16LXnteYINeQ15XXldei16cg15PXotedINen15zXkNa316DXkiDXpNa/15XXnyBcIteQ15nXmdefXCIg16TWv9eV158gXCLXoNeZ15nXn1wiLCDXnO+sr9eW15gg16DvrK/XqCDXkNeZ15HXoteoINe016DXtC4gXCI4XCIg17DXoteo15gg17TvrK7Xm9eY17Qg15DXldefINe0eFwiINew16LXqNeYINe0157vrK/XnNe0LiDXtCvXtCDXnteZ15nXoNeYINem15XXlu+srtee16LXnyDXnNeZ15nXktei158g15DXldefINem15XXlu+srtee16LXnyDXnu+srteb15gg16LXoSDXtNeg76yu15vXmNee76yv15zXtCDXsO+sr9ehINeQ15nXliDXoteh158uIiwiaGludHMiOlsi157XmdeoINeT15DWt9eo16TWv9efINeQ15XXmdeh15jXldeZ16nXnyDXk9eZINeg15XXntei16jXny4iLCLXtNeg15nXmdef17Qg76yv158g15PXmSDXp9ec76yu16DXkiDvrY7XldefINe015DXmdeZ15/XtCAg15DXmdeWINeg76yv16gg17TXoNe0LiIsIjgg15DXmdeWINe076yu15vXmNe0LiIsIte016DXtCArINe076yu15vXmNe0INeQ15nXliDXtNeg76yu15vXmNe0LiIsIte0eFwiINeQ15nXliDXtNee76yv15zXtC4iLCLXtNei16HXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjUsImNvbCI6N30seyJudW1iZXIiOjExLCJkaXJlY3Rpb24iOiJkb3duIiwid29yZCI6Iten15nXoNeQ15QiLCJlbnRyeSI6Iten15nXoNeQ15QiLCJjbHVlIjoi16DXotee15gg16bXldeo15nXpyDXk9ei150g15TXkNa416DXmdenIO+srteWINeT15Ug15XXldeZ15zXodeYINei16gg15bXkNa415wg16DXmdep15gg15TXkNa415HXnyIsImV4cGxhbmF0aW9uIjoi15DXsdeRINee16LXnyDXoNei157XmCDXtNeU76yv16DXmden17Qg16bXldeo15nXpyDXsNei16jXmCDXotehINe016fXmdeg15DXlNe0INew76yv16Eg157Xsteg15gg76yu15Yg15PXlSDXldeV15nXnNeh15gg16LXqCDXlteQ1rjXnCDXoNeZ16nXmCDXlNeQ1rjXkdefLiIsImhpbnRzIjpbIte016DXotee15gg16bXldeo15nXp9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXmdeR16LXqNeT16jXsta+17DXoteS17DXsta315bXoteoLiIsIte015TXkNa416DXmden17Qg15DXmdeWINep15jXkNa416MuIiwi17TXkNa315Yg15PXlSDXldeV15nXnNeh15gg16LXqCDXlteQ1rjXnCDXoNeZ16nXmCDXlNeQ1rjXkdef17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0sInJvdyI6NiwiY29sIjozfSx7Im51bWJlciI6MTIsImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi15bXmdeb16LXqCIsImVudHJ5Ijoi15bXmdeb16LXqCIsImNsdWUiOiIxMDAlINew16LXmCDXoteoINeW15nXmiDXnNei16jXoNei158g15jXkNa316DXptefIiwiZXhwbGFuYXRpb24iOiLXtNei16gg15bXmdea17Qg17DXoteYINec16LXqNeg16LXnyDXmO+srteg16bXnywg15PvrK/XoSDXlNey16HXmCwg15PXmSDXkNeV16rXmdeV16og17TXoteoINeW15nXmte0INeY76yu16DXptefIO+srteo15XXnSDXpteVINee76yu15vXnyDXtNeW15nXm9ei16jXtCDXkNeV158g17DXotefINei762E16LXoSDXkNeZ15YgMTAwJSDXkNeZ15Yg16LXoSDXlteZ15vXoteoLiIsImhpbnRzIjpbIte017DXoteYIC4uLiDXnNei16jXoNei158g15jvrK7XoNem15/XtCDXkNeZ15Yg76yuINew16LXktew76yf15bXoteoLiIsItei16Eg15DXmdeWIO+srtefIO+srteg76yu15LXqO+srted1r7XsNei15LXsO+sn9eW16LXqC4iLCLXtNei16gg15bXmdea17Qg15DXmdeWINep15jvrK/Xoy4iLCLXtDEwMCXXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93Ijo2LCJjb2wiOjV9LHsibnVtYmVyIjoxMywiZGlyZWN0aW9uIjoiYWNyb3NzIiwid29yZCI6IteZ76yd15PXmdep1r7XsNeQ15oiLCJlbnRyeSI6IteZ15nXk9eZ16nXldeV15DXmyIsImNsdWUiOiLXnteQ1rfXntei1r7XnNep15XXnyDXqdec76yv762O15gg16DXmdep15gg15nXotem15ghIiwiZXhwbGFuYXRpb24iOiLXk9eZINe0157XkNa3157Xota+15zXqdeV15/XtCDXkNeZ15Yg17TXme+sndeT76yd16nXtCwg15DWt9eV15XXkNa315PXoi4g15DXsdeRINee16LXnyDXqdec76yv762O15gg16DXmdep15gg15nXotem15gg15DXmdeWINee16LXnyDXsO+srteaLiDXpteV15bvrK7Xntei158g157vrK7Xm9eYINeT76yv16Eg17TXme+sndeT15nXqda+17DvrK/Xmte0INeQ15XXnyDXmdei16bXmCDXkdei16nXkNa316Eg15nvrJ3Xk++sndepINew76yv15og16nXnO+sr++tjteYINeg15nXqdeYINeT15kg157vrK7Xntei1r7XnNep15XXnyEiLCJoaW50cyI6WyLXtNee15DWt9ee16LWvtec16nXldef17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINei16Eg15HXsteY158g762O76yu16gg16LvrYTXotehIO+srteg15PXoteo16kuIiwi17TXqdec15DWuNek1r/XmCDXoNeZ16nXmCDXmdei16bXmNe0INeQ15nXliDXqdeY76yv16MuIiwi157XotefINeT76yu16jXoyDXotehINeR17LXmNefIO+tju+srteoINei762E16LXoSDvrK7XoNeT16LXqNepLiIsIteT15DWuNehINeQ15nXliDXkNa3INe016TWvNeV16DXp9eYINeQ1rfXlteV15nXtDog15PXoteoINeS15DWt9eg16bXoteoINeo157XliDXkNeZ15Yg15DXsdeaINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0sInJvdyI6NywiY29sIjoyfSx7Im51bWJlciI6MTQsImRpcmVjdGlvbiI6ImFjcm9zcyIsIndvcmQiOiLXsNeQ15oiLCJlbnRyeSI6IteV15XXkNebIiwiY2x1ZSI6IteQ15XXmdejIO+sriDXqdeY15nXpyDXpu+sn9eYIiwiZXhwbGFuYXRpb24iOiLXk++sr9ehINeQ15nXliDvrK4g15jXkNa416TWvNec15jXoiDXk9ei16TWv9eZ16DXmdem15nXojog17DXotefINee16LXnyDXkNeZ15Yg17TXkNex16PXtCDXkNeZ15Yg157XotefINe017DvrK7Xmte0LiDvrK4g17TXsO+sr9ea17Qg15DXmdeWIO+sriDXqdeY15nXpyDXpu+sn9eYLiIsImhpbnRzIjpbIteT15DWuNehINeQ15nXliDXkNa3INeY15DWuNek1rzXnNeY16Ig15PXotek1r/Xmdeg15nXpteZ16I6INem17DXsiDXkdeQ1rfXk9ey1rfXmNefLiIsIte015DXldeZ16PXtCDXkNeZ15Yg15DXmdeZ158g15PXotek1r/Xmdeg15nXpteZ16IuIiwi17TXkNa3INep15jXmdenINem17LWt9eY17Qg15DXmdeWINeT15kg16bXsNey15jXoiDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93Ijo3LCJjb2wiOjd9LHsibnVtYmVyIjoxNSwiZGlyZWN0aW9uIjoiZG93biIsIndvcmQiOiLXnteV16jXkyIsImVudHJ5Ijoi157Xldeo15MiLCJjbHVlIjoi17DXmSDXkda31rzXqCDXm9a815XWudeb1rDXkda415Ag762O15XXnyDXk9eo15XXnSDXp9eV157XmCDXpteV16jXmdenIiwiZXhwbGFuYXRpb24iOiLXtNeT16jXlded17Qg17TXp9eV157XmCDXpteV16jXmden17Qg16bXlSDXnu+srteb158g17TXnteV16jXk9e0LCDvrK7Xlu+sriDXnteZ158g157Xoteg15jXqSDXtNew15kg17DXmSDXkda31rzXqCDXm9a815XWudeb1rDXkda415DXtC4iLCJoaW50cyI6WyLXtNen15XXnteYINem15XXqNeZ16fXtCDXkNeZ15Yg15DWtyDXsNei15LXsNey1rfXltei16guIiwi16LXoSDXkNeZ15Yg15DWt9efINeQ15nXkdei16jXk9eo17LWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeT16jXlded17Qg15DXmdeWINep15jXkNa416MuIiwi17TXsNeZINeR1rfWvNeoINeb1rzXlda515vWsNeR1rjXkNe0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjksImNvbCI6MX0seyJudW1iZXIiOjE2LCJkaXJlY3Rpb24iOiJhY3Jvc3MiLCJ3b3JkIjoi16nXldeoINeU15HXqCIsImVudHJ5Ijoi16nXldeo15TXkdeoIiwiY2x1ZSI6IteT15kg16LXqNep15jXoiDXqdeR16rXmdedINeV15XXoteYINeo15fXnCDXlNei15zvrY7XnyDXkdeo16LXoNeS16LXnyDXqNeZ16DXk++tjtec15nXmdepINeV15XvrK/XoSDXnteZ16gg15XXldei15zXnyDXoteh158iLCJleHBsYW5hdGlvbiI6IteT15kg16LXqNep15jXoiDXkNeV16rXmdeV16og762O15XXnyDXtNep15HXqteZ150g15XXldei15gg16jXl9ecINeU16LXnO+tjtefINeR16jXoteg15LXotefINeo15nXoNeT762O15zXmdeZ16nXtCDXltei16DXotefINe016nXldeoINeU15HXqNe0INeV15XvrK/XoSDXnteZ16gg15XXldei15zXnyDXoteh158g17DXotefINee16nXmdeXINew16LXmCDXp9eV157XotefLiIsImhpbnRzIjpbIte015PXmSDXoteo16nXmNei17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNex16HXp9ec17LWt9eR16LXqNa+17DXoteS17DXsta315bXoteoLiIsIte016nXkdeq15nXnSDXldeV16LXmCDXqNeX15wg15TXotec16TWv9efINeR16jXoteg15LXotefINeo15nXoNeT16TWv9ec15nXmdep17Qg15DXmdeWINep15jXkNa416MuIiwi17TXldeV15DWuNehINee15nXqCDXldeV16LXnNefINei16HXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjEwLCJjb2wiOjB9LHsibnVtYmVyIjoxNywiZGlyZWN0aW9uIjoiZG93biIsIndvcmQiOiLXkdec16LXqCIsImVudHJ5Ijoi15HXnNei16giLCJjbHVlIjoi15HXmdec15nXkNa416DXoteoINen16LXnyDXlteZ15og16DXmdep15gg15DvrJ/XoNeU15DWt9ec15jXnyDXkNeV158g15XXldei16jXmCDXpNa816jXotee15nXoteoINee15nXoNeZ16HXmNei16gg16TWv9eV158g16LXoNeS15zXkNa316DXkyIsImV4cGxhbmF0aW9uIjoi17TXkdeZ15zXmdeQ1rjXoNei16jXtCDXp9ei158g15bXmdeaINeg15nXqdeYINeQ76yf16DXlNeQ1rfXnNeY158sINeT76yv16Eg15TXsteh15gg16LXqCDXp9ei158g16DXmdep15gg15TvrK7XnNeY158g15PXmSDXkNeV16rXmdeV16og17TXkNeZ15nXoNe0INeQ15nXnyDXlteZ15osINeQ15XXnyDvrY7vrK7XqNec15nXqNeYINeW17IsINeQ15XXnyDXsO+sr9ehINeR15zvrJ/XkdeYINeQ15nXkdei16gg17DXoteo15gg17TXkdec16LXqNe0LCDXkNeV158g15jvrK/XoNeZINeR15zXoteoINeQ15nXliDvrK4g15LXotew16LXltei16DXoteoINek1rzXqNei157Xmdei16gg157Xmdeg15nXodeY16LXqCDXpNa/15XXnyDXoteg15LXnNeQ1rfXoNeTLiIsImhpbnRzIjpbIte016fXotefINeW15nXmiDXoNeZ16nXmCDXkNey1rfXoNeU15DWt9ec15jXn9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXsdeh157Xoten15/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtNeR15nXnNeZ15DWuNeg16LXqNe0INeQ15nXliDXqdeY15DWuNejLiIsIte016TWvNeo16LXnteZ16LXqCDXnteZ16DXmdeh15jXoteoINek1r/XldefINei16DXktec15DWt9eg15PXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93IjoxMCwiY29sIjo0fSx7Im51bWJlciI6MTgsImRpcmVjdGlvbiI6ImFjcm9zcyIsIndvcmQiOiLXp9ei16jXmCIsImVudHJ5Ijoi16fXoteo15giLCJjbHVlIjoi16LXqCDvrY7XkNa315zXmCDXkNa316jXsta3158g15DXmdefINec17LXk9eZ15LXp9ey15gg15DXldefINeo15nXmdeg15nXp9eYIiwiZXhwbGFuYXRpb24iOiLXnNey15PXmdeS16fXsteYLCDXk++sr9ehINeU17LXodeYINee16LXnyDXnNey15PXmden15gg15DXsdehINe016fXsteY17Qg17DXoteo15gg17TXp9eY17QuIO+srteWINee16LXnyDXnNey15LXmCDXtNei16jXtCDXkNeZ158g17TXp9eY17Qg16fXqNeZ15LXmCDXntei158g17TXp9ei16jXmNe0INew76yv16Eg157Xsteg15gg17TXqNey16DXmden15jXtC4iLCJoaW50cyI6WyLXtNec17LXk9eZ15LXtCDXkNeZ15Yg76yuINew16LXktew76yf15bXoteoLiIsItei16Eg15DXmdeWIO+srtefINeQ17HXodee16LXp9efINew16LXktew76yf15bXoteoLiIsIte016fXsteY17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINee76yu15vXnyDXtNen17LXmNe0INec17LXk9eZ16cuIiwi17TXpNa/15DWt9ec15gg15DWt9eo17LWt9efINeQ15nXn9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDvrK4g16fXkNa316HXmNef1r7XsNei15LXsNey1rfXltei16guIiwiXCLXoteo17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINec17LXktefINe016LXqNe0INeQ15nXoNei15XXldeZ15nXoNeZ16cg762O15XXnyDXk9eZINec17LXk9eZ16fXoiDXtNen17LXmNe0LiIsIte016jXmdeZ16DXmden15jXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93IjoxMiwiY29sIjozfSx7Im51bWJlciI6MTksImRpcmVjdGlvbiI6ImRvd24iLCJ3b3JkIjoi15jvrK7Xk++sriIsImVudHJ5Ijoi15jXkNeT15AiLCJjbHVlIjoi15jXqdei16jXotek1rzXkNa315vXotehINeQ15nXnyDXk9ei16gg15DWuNeW16LXqNeiINep15jXoten158g15DWt9eo15XXmdehINeW15nXmdei16jXoiDXp9ei16TWvCDXpteVINeW15DWuNeS158g15LXmdeRINeQ1rcg16fXldenISIsImV4cGxhbmF0aW9uIjoi17TXmNep16LXqNei16TWvNeQ1rfXm9ei16Eg15DXmdefINeT16LXqCDXkNa415bXoteo16LXtCDXqdeY16LXp9efINeQ1rfXqNeV15nXoSDXlteZ15nXoteo16Ig16fXotek1rwsINeT76yv16Eg15TXsteh15gsINeS16LXkdefINeW15nXmdei16jXoiDXoteo16nXmNeiINeQ15XXqteZ15XXqiDXpteVINe015bXkNa415LXnyDXkteZ15Eg15DWtyDXp9eV16fXtDog15jvrK7Xk++sriEiLCJoaW50cyI6WyLXtNep15jXoten158g15DWt9eo15XXmdehINeW15nXmdei16jXoiDXp9ei16TWvNe0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXsdeh16fXnNey1rfXkdei16jWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeY16nXoteo16LXpNa815DWt9eb16LXoSDXkNeZ158g15PXoteoINeQ1rjXltei16jXote0INeQ15nXliDXqdeY15DWuNejLiIsIte015bXkNa415LXnyDXkteZ15Eg15DWtyDXp9eV16fXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXSwicm93IjoxMiwiY29sIjo2fSx7Im51bWJlciI6MjAsImRpcmVjdGlvbiI6ImFjcm9zcyIsIndvcmQiOiLvrYTXnO+srtelIiwiZW50cnkiOiLXpNec15DXpiIsImNsdWUiOiLXkNex16TWv9eo17LWt9eh158g76yu158g76yv16jXmCIsImV4cGxhbmF0aW9uIjoi15DXsdek1r/XqNey1rfXodefLCDXoten16HvrYTXnO+sr9eT15nXqNefOiDvrYTXnO+srtelLiDXkNeV158g76yu158g76yv16jXmCDXkNeZ15Yg15DXsdeaIO+sriDvrYTXnO+srtelIiwiaGludHMiOlsi15PXkNa416Eg15DXmdeWINeQ1rcg15jXkNa416TWvNec15jXoiDXk9ei16TWv9eZ16DXmdem15nXojog16bXsNeyINeR15DWt9eT17LWt9eY158uIiwi17TXkNex16TWv9eo17LWt9eh15/XtCDXkNeZ15Yg15DXmdeZ158g15PXotek1r/Xmdeg15nXpteZ16IuIiwi17TXkNa3158g15DWuNeo15jXtCDXkNeZ15Yg15PXmSDXptew17LXmNeiINeT16LXpNa/15nXoNeZ16bXmdeiLiJdLCJyb3ciOjE1LCJjb2wiOjR9XX0";</script>
+
+<script src="normalize.js"></script>
+<script src="solver-common.js"></script>
+<script>
+  // normaliseHebrew lives in normalize.js; KB_ROWS/buildKeyboard,
+  // makeCellInput, the b64 codec, and the modal helpers live in
+  // solver-common.js (both loaded above).
+
+  const data = (typeof _pgd !== 'undefined') ? b64decode(_pgd) : null;
+  if (!data) {
+    document.querySelector('.card').textContent = 'קען נישט לייענען די דאַטן.';
+    throw new Error('grid data missing — build with build_grid_solver.py');
+  }
+
+  const key = (r, c) => r + '-' + c;
+
+  // Enumeration text for a word: computed from the display word, unless
+  // the entry carries an explicit enum override ("2,3" style).
+  const wordLengthSpec = w => w.enumSpec
+    ? formatLengthSpec(w.enumSpec.replace(/,/g, ' '))
+    : formatLengthSpec(answerToLengthSpec(w.word));
+
+  // filler.py's blocked-grid format (blocks + entries) is adapted here into
+  // the criss-cross shape (cells + placements) the rest of the page uses;
+  // data.blocked additionally paints the non-word cells black.
+  if (data.entries) {
+    data.placements = data.entries.map(e => ({
+      number: e.num, direction: e.dir, row: e.row, col: e.col,
+      entry: e.answer, word: e.display,
+      clue: e.clue || null, explanation: e.explanation || null,
+      hints: e.hints || [], enumSpec: e.enum || null,
+    }));
+    const cellMap = {};
+    data.placements.forEach(p => {
+      const dr = p.direction === 'down' ? 1 : 0, dc = 1 - dr;
+      [...p.entry].forEach((ch, i) => { cellMap[key(p.row + dr * i, p.col + dc * i)] = ch; });
+    });
+    data.cells = Object.entries(cellMap).map(([k, letter]) => {
+      const [row, col] = k.split('-').map(Number);
+      return { row, col, letter };
+    });
+    data.blocked = true;
+  }
+
+  // Solution letters and word records derived from the layout data.
+  const solution = {};
+  data.cells.forEach(c => { solution[key(c.row, c.col)] = c.letter; });
+
+  const words = data.placements.map(p => {
+    const dr = p.direction === 'down' ? 1 : 0;
+    const dc = p.direction === 'across' ? 1 : 0;
+    const coords = [];
+    for (let i = 0; i < p.entry.length; i++) coords.push(key(p.row + dr * i, p.col + dc * i));
+    return { ...p, id: p.direction + '-' + p.number, coords };
+  });
+
+  const cellWords = {};   // key -> { across: word, down: word }
+  words.forEach(w => {
+    w.coords.forEach(k => {
+      (cellWords[k] = cellWords[k] || {})[w.direction] = w;
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // State + persistence. The storage key embeds a fingerprint of the layout,
+  // so state saved for an older grid is ignored rather than misapplied.
+  // ═══════════════════════════════════════════════════════
+  const cells = {};       // key -> { el, value, locked, wrap }
+  const clueEls = {};     // word id -> clue-list element
+  const curEls = {};      // word id -> current-clue display element
+  const hintStates = {};  // word id -> { revealed } for renderHints (solver-common.js)
+  let active = { key: null, dir: 'across' };
+  const solvedIds = new Set();
+
+  const layoutHash = (() => {
+    const s = data.rows + 'x' + data.cols + ':' + words.map(w => w.id + '@' + w.coords[0] + '=' + w.entry).join(';');
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  })();
+  const STORAGE_KEY = 'yiddish-grid-' + layoutHash;
+
+  function saveState() {
+    const v = {};
+    Object.entries(cells).forEach(([k, c]) => { if (c.value) v[k] = c.value; });
+    const locked = Object.keys(cells).filter(k => cells[k].locked);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ v, solved: [...solvedIds], locked }));
+    } catch (e) { /* storage unavailable (private mode) — play without saving */ }
+  }
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
+    catch (e) { return null; }
+  }
+
+  function clearState() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    solvedIds.clear();
+    Object.values(hintStates).forEach(s => { s.revealed = 0; });
+    Object.values(cells).forEach(c => {
+      c.value = ''; c.locked = false;
+      c.el.value = '';
+      c.el.classList.remove('locked', 'wrong');
+      c.el.removeAttribute('readonly');
+    });
+    Object.values(clueEls).forEach(el => el.classList.remove('solved'));
+    Object.values(curEls).forEach(el => el.classList.remove('solved'));
+    selectWord(words[0], true);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Grid DOM
+  // ═══════════════════════════════════════════════════════
+  function buildGridDom() {
+    const grid = document.getElementById('cw-grid');
+    grid.style.setProperty('--cols', data.cols);
+    grid.style.setProperty('--rows', data.rows);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'cw-lines');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    const numbers = {};
+    words.forEach(w => {
+      const k = w.coords[0];
+      if (!(k in numbers)) numbers[k] = w.number;
+    });
+
+    for (let r = 0; r < data.rows; r++) {
+      for (let c = 0; c < data.cols; c++) {
+        const k = key(r, c);
+        const wrap = document.createElement('div');
+        wrap.className = 'cw-cell';
+        if (k in solution) {
+          const input = makeCellInput();
+          input.addEventListener('focus', () => selectCell(k, false));
+          input.addEventListener('mousedown', e => {
+            // Locked cells never take browser focus — select through them
+            // instead (selectCell redirects the cursor to an unlocked cell).
+            if (cells[k].locked) { e.preventDefault(); selectCell(k, false); return; }
+            // A second click on the already-active cell toggles direction.
+            if (active.key === k) { e.preventDefault(); selectCell(k, true); }
+          });
+          input.addEventListener('input', () => {
+            if (isModalOpen() || cells[k].locked) { input.value = cells[k].value; return; }
+            const raw = input.value; input.value = cells[k].value;
+            const norm = normaliseHebrew(raw);
+            if (norm) inputLetters(norm);
+          });
+          input.addEventListener('keydown', onCellKeydown);
+          if (numbers[k] != null) {
+            const num = document.createElement('span');
+            num.className = 'cw-num';
+            num.textContent = numbers[k];
+            wrap.appendChild(num);
+          }
+          wrap.appendChild(input);
+          cells[k] = { el: input, value: '', locked: false, wrap };
+        } else if (data.blocked) {
+          wrap.classList.add('cw-block');
+        }
+        grid.appendChild(wrap);
+      }
+    }
+    // Appended last (painted on top): every filled cell has an opaque
+    // background (plain white, or the tan word/focus highlight), which
+    // would otherwise completely hide any grid line drawn underneath it —
+    // only lines bordering an empty, backgroundless block cell would
+    // survive, which is exactly the "outline only, no interior dividers"
+    // look this fixes.
+    grid.appendChild(svg);
+  }
+
+  // Draws every structural grid line as one SVG path instead of per-cell
+  // borders. viewBox is set to the grid's *actual measured pixel size*, so
+  // one user unit is exactly one CSS pixel and every coordinate below is
+  // an integer — with shape-rendering:crispEdges that paints as a single
+  // razor-sharp stroke, immune to the sub-pixel seams that per-cell
+  // borders can show even at identical integer positions.
+  function buildGridLines() {
+    const grid = document.getElementById('cw-grid');
+    const svg = grid.querySelector('.cw-lines');
+    const wraps = [...grid.querySelectorAll('.cw-cell')];
+    // Row 0's cells give us the true track origin and size. Read these
+    // from the cells themselves, not grid.getBoundingClientRect(): a grid
+    // wider than its centered card (fixed-px tracks vs. a max-width
+    // container) renders its tracks past the container's own box, so the
+    // container's box can't be trusted as the tracks' origin or width.
+    const firstCellRect = wraps[0].getBoundingClientRect();       // col 0 (rightmost)
+    const lastCellRect = wraps[data.cols - 1].getBoundingClientRect(); // col cols-1 (leftmost)
+    const cellPx = Math.round(firstCellRect.width);
+    const gridBoxRect = grid.getBoundingClientRect();
+    const offsetLeft = lastCellRect.left - gridBoxRect.left;
+    const offsetTop = firstCellRect.top - gridBoxRect.top;
+    const w = cellPx * data.cols, h = cellPx * data.rows;
+    svg.style.left = offsetLeft + 'px';
+    svg.style.top = offsetTop + 'px';
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+
+    // col 0 is the rightmost column (see key()/solution note above), so
+    // physical x (0 = left edge of the grid) runs opposite to col index.
+    const left = c => (data.cols - 1 - c) * cellPx;
+    let d = '';
+    for (let r = 0; r < data.rows; r++) {
+      for (let c = 0; c < data.cols; c++) {
+        if (!(key(r, c) in solution)) continue;
+        const x0 = left(c), x1 = x0 + cellPx, y0 = r * cellPx, y1 = y0 + cellPx;
+        const hasRight = key(r, c - 1) in solution;
+        const hasDown = key(r + 1, c) in solution;
+        d += `M${x0} ${y0}L${x1} ${y0} `;   // top: always
+        d += `M${x0} ${y0}L${x0} ${y1} `;   // physical left: always
+        if (!hasRight) d += `M${x1} ${y0}L${x1} ${y1} `;
+        if (!hasDown) d += `M${x0} ${y1}L${x1} ${y1} `;
+      }
+    }
+    svg.innerHTML =
+      `<path d="${d}" fill="none" stroke="#8a7050" stroke-width="1" shape-rendering="crispEdges"/>`;
+  }
+
+  function onCellKeydown(e) {
+    if (isModalOpen()) return;
+    if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doBackspace(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); moveSpatial(0, -1); }
+    else if (e.key === 'ArrowLeft')  { e.preventDefault(); moveSpatial(0, +1); }
+    else if (e.key === 'ArrowUp')    { e.preventDefault(); moveSpatial(-1, 0); }
+    else if (e.key === 'ArrowDown')  { e.preventDefault(); moveSpatial(+1, 0); }
+    else if (e.key === 'Enter')      { e.preventDefault(); checkActiveWord(); }
+  }
+
+  // Move to the nearest fillable cell in a straight line from the active one.
+  // (dr, dc) is in grid coordinates: col +1 is one cell further LEFT visually,
+  // so ArrowLeft maps to dc +1 and ArrowRight to dc -1.
+  function moveSpatial(dr, dc) {
+    if (!active.key) return;
+    let [r, c] = active.key.split('-').map(Number);
+    for (;;) {
+      r += dr; c += dc;
+      if (r < 0 || c < 0 || r >= data.rows || c >= data.cols) return;
+      const k = key(r, c);
+      // Locked cells can't take input, so arrow keys glide over them.
+      if (k in cells && !cells[k].locked) { selectCell(k, false); return; }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Selection + highlighting
+  // ═══════════════════════════════════════════════════════
+  function activeWord() {
+    return active.key ? (cellWords[active.key] || {})[active.dir] || null : null;
+  }
+
+  function selectCell(k, toggle) {
+    const wordsHere = cellWords[k] || {};
+    let dir = active.dir;
+    if (toggle && wordsHere.across && wordsHere.down) {
+      dir = dir === 'across' ? 'down' : 'across';
+    }
+    if (!wordsHere[dir]) dir = wordsHere.across ? 'across' : 'down';
+    let target = k;
+    if (cells[k].locked) {
+      // A locked cell can't take input: still select a word through it (so
+      // its clue shows), but prefer a direction with work left and land the
+      // cursor on that word's first unlocked cell.
+      for (const d of [dir, dir === 'across' ? 'down' : 'across']) {
+        const w = wordsHere[d];
+        if (w && w.coords.some(kk => !cells[kk].locked)) { dir = d; break; }
+      }
+      target = wordsHere[dir].coords.find(kk => !cells[kk].locked) || k;
+    }
+    active = { key: target, dir };
+    refreshHighlight();
+  }
+
+  function selectWord(w, focus) {
+    // Land on the first unlocked cell of the word (or its start if all locked).
+    const target = w.coords.find(k => !cells[k].locked) || w.coords[0];
+    active = { key: target, dir: w.direction };
+    refreshHighlight();
+    if (focus) cells[target].el.focus();
+  }
+
+  function refreshHighlight() {
+    Object.values(cells).forEach(c => c.el.classList.remove('active', 'word-hl'));
+    Object.values(clueEls).forEach(el => el.classList.remove('active'));
+    Object.values(curEls).forEach(el => el.classList.remove('visible'));
+    const w = activeWord();
+    if (w) {
+      // Locked cells keep their locked look — no word highlight.
+      w.coords.forEach(k => { if (!cells[k].locked) cells[k].el.classList.add('word-hl'); });
+      clueEls[w.id].classList.add('active');
+      curEls[w.id].classList.add('visible');
+    }
+    if (active.key && !cells[active.key].locked) {
+      const el = cells[active.key].el;
+      el.classList.add('active');
+      if (document.activeElement !== el) el.focus();
+      // Select any existing letter so the next keystroke replaces it instead
+      // of appending — a plain input.value doesn't clear/select on its own,
+      // and the cell allows up to 10 chars (see makeCellInput) so a keystroke
+      // typed at the end of an existing value would otherwise land as a
+      // second character, which inputLetters would then write into the
+      // *next* cell rather than overwriting this one.
+      el.select();
+    } else if (document.activeElement && document.activeElement.classList.contains('cell')) {
+      // No focusable active cell this time (e.g. a fully locked word was
+      // selected) — blur the previously focused cell so it stops showing
+      // the :focus highlight as if it were still selected.
+      document.activeElement.blur();
+    }
+    updateHelpButtons();
+  }
+
+  function focusActive() {
+    if (active.key && !cells[active.key].locked) cells[active.key].el.focus();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Typing
+  // ═══════════════════════════════════════════════════════
+  function setCellValue(k, ch) {
+    const c = cells[k];
+    c.value = ch;
+    c.el.value = ch;
+    c.el.classList.remove('wrong');
+  }
+
+  // Position of the active cell within the active word, or -1.
+  function activePos(w) { return w.coords.indexOf(active.key); }
+
+  function inputLetters(chars) {
+    let w = activeWord();
+    if (!w) return;
+    for (const ch of chars) {
+      let pos = activePos(w);
+      while (pos < w.coords.length && cells[w.coords[pos]].locked) pos++;
+      if (pos >= w.coords.length) break;
+      setCellValue(w.coords[pos], ch);
+      // advance to the next cell of the word (locked ones are skipped above)
+      if (pos + 1 < w.coords.length) active.key = w.coords[pos + 1];
+    }
+    refreshHighlight();
+    saveState();
+    // Auto-check runs checkWord() directly (not checkActiveWord()/checkAll()),
+    // so it never shakes the check button — shaking is reserved for an
+    // explicit, deliberate check, and would be constant and annoying if it
+    // fired on every keystroke while a word is still half-typed or wrong.
+    if (autoCheck) {
+      const res = checkWord(w);
+      if (res === 'solved') afterSolveCheck();
+    }
+  }
+
+  function doBackspace() {
+    const w = activeWord();
+    if (!w) return;
+    const c = cells[active.key];
+    if (!c.locked && c.value) {
+      setCellValue(active.key, '');
+    } else {
+      let pos = activePos(w) - 1;
+      while (pos >= 0 && cells[w.coords[pos]].locked) pos--;
+      if (pos >= 0) {
+        active.key = w.coords[pos];
+        setCellValue(active.key, '');
+      }
+    }
+    refreshHighlight();
+    saveState();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Checking + solving
+  // ═══════════════════════════════════════════════════════
+  function shake(btn) {
+    btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
+    btn.addEventListener('animationend', () => btn.classList.remove('shake'), { once: true });
+  }
+
+  // Returns 'incomplete' | 'wrong' | 'solved'. Checks whichever letters are
+  // filled in — locking correct ones in place and flagging wrong ones red —
+  // and leaves blank cells alone. Only marks the word 'solved' once every
+  // cell is both filled and correct.
+  function checkWord(w) {
+    if (solvedIds.has(w.id)) return 'solved';
+    let anyWrong = false;
+    let allFilled = true;
+    w.coords.forEach(k => {
+      if (!cells[k].value) { allFilled = false; return; }
+      if (cells[k].value === solution[k]) {
+        if (!cells[k].locked) lockCellAt(k, solution[k]);
+      } else {
+        anyWrong = true;
+        cells[k].el.classList.add('wrong');
+      }
+    });
+    if (allFilled && !anyWrong) { solveWord(w); return 'solved'; }
+    refreshHighlight();
+    saveState();
+    return anyWrong ? 'wrong' : 'incomplete';
+  }
+
+  function lockCellAt(k, letter) {
+    const c = cells[k];
+    c.value = letter;
+    c.el.value = letter;
+    c.locked = true;
+    c.el.classList.add('locked');
+    c.el.classList.remove('wrong');
+    c.el.setAttribute('readonly', 'true');
+  }
+
+  function solveWord(w) {
+    solvedIds.add(w.id);
+    w.coords.forEach(k => lockCellAt(k, solution[k]));
+    clueEls[w.id].classList.add('solved');
+    curEls[w.id].classList.add('solved');   // shows the 🔑 in the current-clue box
+    refreshHighlight();   // freshly locked cells must drop active/word styling
+    saveState();
+  }
+
+  function checkActiveWord() {
+    const w = activeWord();
+    if (!w) return;
+    const res = checkWord(w);
+    if (res === 'wrong') { shake(document.getElementById('btn-check-menu')); return; }
+    afterSolveCheck();
+  }
+
+  function checkAll() {
+    let anyBad = false;
+    words.forEach(w => {
+      const res = checkWord(w);
+      if (res === 'wrong') anyBad = true;
+    });
+    if (anyBad) { shake(document.getElementById('btn-check-menu')); return; }
+    afterSolveCheck();
+  }
+
+  function afterSolveCheck() {
+    if (solvedIds.size === words.length) showSolvedAll();
+    else focusActive();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Auto-check — a standing preference (not tied to any one puzzle), so it
+  // carries over between grids rather than living under STORAGE_KEY.
+  // ═══════════════════════════════════════════════════════
+  const AUTOCHECK_KEY = 'yiddish-grid-autocheck';
+  let autoCheck = false;
+  try { autoCheck = localStorage.getItem(AUTOCHECK_KEY) === '1'; } catch (e) {}
+
+  // Checks every word without shaking — used both when auto-check is
+  // switched on (to catch up on what's already filled in) and to silently
+  // re-validate a restored board at load.
+  function silentCheckAll() {
+    words.forEach(w => checkWord(w));
+  }
+
+  function setAutoCheck(on) {
+    autoCheck = on;
+    try { localStorage.setItem(AUTOCHECK_KEY, on ? '1' : '0'); } catch (e) {}
+    document.getElementById('btn-auto-check').classList.toggle('on', on);
+    if (on) {
+      silentCheckAll();
+      if (solvedIds.size === words.length) showSolvedAll();
+      else focusActive();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Hints + reveal — per active word, built on renderHints and
+  // revealNextLetterIn from solver-common.js (cryptic.html uses the same).
+  // ═══════════════════════════════════════════════════════
+  function updateHelpButtons() {
+    const w = activeWord();
+    document.getElementById('btn-hint').style.display =
+      (w && (w.hints || []).length > 0 && !solvedIds.has(w.id)) ? '' : 'none';
+    document.getElementById('btn-reveal').style.display =
+      (!w || w.coords.every(k => cells[k].locked)) ? 'none' : '';
+  }
+
+  function openWordHints() {
+    const w = activeWord();
+    if (!w) return;
+    const state = hintStates[w.id] = hintStates[w.id] || { revealed: 0 };
+    renderHints(setModal('הילף'), w.hints || [], state, { onExhausted: updateHelpButtons });
+    openModal();
+    updateHelpButtons();
+  }
+
+  function revealLetter() {
+    const w = activeWord();
+    if (!w) return;
+    const states = w.coords.map(k => cells[k]);
+    const idx = revealNextLetterIn(states, w.entry, (i, letter) => lockCellAt(w.coords[i], letter));
+    if (idx < 0) return;
+    // Like cryptic.html's advanceActiveAfterLock: if the active cell is now
+    // locked, move forward (cyclically within the word) to an unlocked one.
+    if (cells[active.key].locked) {
+      const pos = activePos(w);
+      for (let d = 1; d <= w.coords.length; d++) {
+        const next = w.coords[(pos + d) % w.coords.length];
+        if (!cells[next].locked) { active.key = next; break; }
+      }
+    }
+    refreshHighlight();
+    saveState();
+    if (w.coords.every(k => cells[k].locked)) {
+      if (!solvedIds.has(w.id)) solveWord(w);
+      afterSolveCheck();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Modal contents (explanation / confirm-clear / solved-all)
+  // ═══════════════════════════════════════════════════════
+  function setModal(title) {
+    document.getElementById('modal-title').textContent = title;
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '';
+    return body;
+  }
+
+  // The 🔑 modal: clue, then the same explanation + available-hints details
+  // cryptic.html shows in its solved view (renderSolvedDetails, shared).
+  function showExplanation(w) {
+    const body = setModal(w.word);
+    const clue = document.createElement('div');
+    clue.className = 'hint-item';
+    clue.textContent = w.clue ? w.clue : w.word;
+    body.appendChild(clue);
+    const details = document.createElement('div');
+    renderSolvedDetails(details, w.explanation, w.hints || []);
+    body.appendChild(details);
+    openModal();
+  }
+
+  function confirmClear() {
+    const body = setModal('מעק אויס אַלעס');
+    const text = document.createElement('p');
+    text.className = 'confirm-text';
+    text.textContent = 'ביסטו זיכער? דאָס וועט אױסמאַקן אַלע אײַנגעשריבענע אותיות און מען וועט דאַרפֿן אָנהייבן פֿון אָנהײב.';
+    const actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+    const yes = document.createElement('button');
+    yes.className = 'btn-primary';
+    yes.textContent = 'יאָ, מעק אויס';
+    yes.addEventListener('click', () => { closeModal(); clearState(); });
+    const no = document.createElement('button');
+    no.className = 'btn-secondary';
+    no.textContent = 'ניין';
+    no.addEventListener('click', () => { closeModal(); focusActive(); });
+    actions.appendChild(yes); actions.appendChild(no);
+    body.appendChild(text); body.appendChild(actions);
+    openModal();
+  }
+
+  function showSolvedAll() {
+    const body = setModal('');
+    const banner = document.createElement('div');
+    banner.className = 'solved-banner';
+    banner.textContent = 'געלייזט!';
+    const text = document.createElement('p');
+    text.style.cssText = 'text-align:center;font-size:1rem;color:#5a3e1b;margin-bottom:0.5rem;';
+    text.textContent = 'דו האָסט געלייזט דאָס גאַנצע קעסטל־רעטעניש. יישר־כּוח!';
+    body.appendChild(banner); body.appendChild(text);
+    openModal();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Clue lists
+  // ═══════════════════════════════════════════════════════
+  function buildClueLists() {
+    const containers = {
+      across: document.getElementById('clues-across'),
+      down: document.getElementById('clues-down'),
+    };
+    words.forEach(w => {
+      const el = document.createElement('div');
+      el.className = 'gclue';
+      const num = document.createElement('span');
+      num.className = 'gclue-num';
+      num.textContent = w.number + '.';
+      const text = document.createElement('span');
+      text.appendChild(document.createTextNode((w.clue ? w.clue : w.word) + ' '));
+      const len = document.createElement('span');
+      len.className = 'gclue-len';
+      len.textContent = wordLengthSpec(w);
+      text.appendChild(len);
+      const expBtn = document.createElement('button');
+      expBtn.className = 'gclue-exp-btn';
+      expBtn.innerHTML = '<i class="ti ti-key"></i>';
+      expBtn.title = 'אױסטײַטש';
+      expBtn.addEventListener('click', e => { e.stopPropagation(); showExplanation(w); });
+      el.appendChild(num); el.appendChild(text); el.appendChild(expBtn);
+      el.addEventListener('click', () => selectWord(w, true));
+      containers[w.direction].appendChild(el);
+      clueEls[w.id] = el;
+    });
+  }
+
+  // One display element per clue, all stacked in the same place above the
+  // keyboard; refreshHighlight() reveals the active one. Because every item
+  // occupies the box, its height fits the longest clue and never changes.
+  function buildCurrentClue() {
+    const wrapEl = document.getElementById('current-clue');
+    words.forEach(w => {
+      const item = document.createElement('div');
+      item.className = 'cur-item';
+      const num = document.createElement('span');
+      num.className = 'cur-num';
+      num.textContent = w.number + '.';
+      const dir = document.createElement('span');
+      dir.className = 'cur-dir sym-x';
+      dir.textContent = w.direction === 'across' ? '←' : '↓';
+      const len = document.createElement('span');
+      len.className = 'gclue-len';
+      len.textContent = wordLengthSpec(w);
+      const keyBtn = document.createElement('button');
+      keyBtn.className = 'cur-key-btn';
+      keyBtn.innerHTML = '<i class="ti ti-key"></i>';
+      keyBtn.title = 'אױסטײַטש';
+      keyBtn.addEventListener('click', () => showExplanation(w));
+      item.appendChild(num);
+      item.appendChild(document.createTextNode(' '));
+      item.appendChild(dir);
+      item.appendChild(document.createTextNode(' ' + (w.clue ? w.clue : w.word) + ' '));
+      item.appendChild(len);
+      item.appendChild(document.createTextNode(' '));
+      item.appendChild(keyBtn);
+      wrapEl.appendChild(item);
+      curEls[w.id] = item;
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Init
+  // ═══════════════════════════════════════════════════════
+  buildGridDom();
+  buildGridLines();
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(buildGridLines, 100);
+  });
+  buildClueLists();
+  buildCurrentClue();
+  buildKeyboard(document.getElementById('keyboard'), {
+    onLetter(k) {
+      const n = normaliseHebrew(k);
+      if (n && active.key && cells[active.key]) {
+        const el = cells[active.key].el;
+        el.value = n;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    },
+    onBackspace: doBackspace,
+    afterKey: focusActive,
+  });
+
+  const checkMenuBtn = document.getElementById('btn-check-menu');
+  const checkMenu = document.getElementById('check-menu');
+  function closeCheckMenu() {
+    checkMenu.classList.add('hidden');
+    checkMenuBtn.classList.remove('open');
+  }
+  function toggleCheckMenu() {
+    const wasHidden = checkMenu.classList.contains('hidden');
+    closeCheckMenu();
+    if (wasHidden) { checkMenu.classList.remove('hidden'); checkMenuBtn.classList.add('open'); }
+  }
+  checkMenuBtn.addEventListener('click', e => { e.stopPropagation(); toggleCheckMenu(); });
+  document.addEventListener('click', e => {
+    if (!checkMenu.classList.contains('hidden') && !e.target.closest('.menu-wrap')) closeCheckMenu();
+  });
+
+  document.getElementById('btn-check-word').addEventListener('click', () => { closeCheckMenu(); checkActiveWord(); });
+  document.getElementById('btn-check-all').addEventListener('click', () => { closeCheckMenu(); checkAll(); });
+  document.getElementById('btn-auto-check').addEventListener('click', () => { closeCheckMenu(); setAutoCheck(!autoCheck); });
+  document.getElementById('btn-hint').addEventListener('click', openWordHints);
+  document.getElementById('btn-reveal').addEventListener('click', revealLetter);
+  document.getElementById('btn-clear').addEventListener('click', confirmClear);
+  document.getElementById('modal-close').onclick = () => { closeModal(); focusActive(); };
+  document.getElementById('modal-overlay').onclick = e => {
+    if (e.target === e.currentTarget) { closeModal(); focusActive(); }
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isModalOpen()) { closeModal(); focusActive(); }
+    else if (e.key === 'Escape' && !checkMenu.classList.contains('hidden')) closeCheckMenu();
+  });
+
+  // Restore saved progress (values first, then re-solve saved word ids —
+  // verifying each against the solution rather than trusting the store).
+  const saved = loadState();
+  if (saved && saved.v) {
+    Object.entries(saved.v).forEach(([k, ch]) => {
+      if (k in cells && typeof ch === 'string' && ch.length === 1) setCellValue(k, ch);
+    });
+    (saved.solved || []).forEach(id => {
+      const w = words.find(x => x.id === id);
+      if (w && w.coords.every(k => cells[k].value === solution[k])) solveWord(w);
+    });
+    // Individually revealed (locked but unsolved-word) cells — re-lock only
+    // those whose saved letter is actually correct.
+    (saved.locked || []).forEach(k => {
+      if (k in cells && cells[k].value === solution[k]) lockCellAt(k, solution[k]);
+    });
+  }
+
+  document.getElementById('btn-auto-check').classList.toggle('on', autoCheck);
+  if (autoCheck) silentCheckAll();
+
+  selectWord(words[0], false);
+  if (solvedIds.size === words.length && words.length > 0) { /* already fully solved — leave as-is */ }
+</script>
+</body>
+</html>

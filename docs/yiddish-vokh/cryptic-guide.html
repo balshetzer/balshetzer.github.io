@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="yi" dir="rtl">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZYQZ5BWE0V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZYQZ5BWE0V');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>כיטרע רעטענישן מיט חזקי פֿישער</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@300;400;500;600;700&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 18px; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+    .sym-x { font-family: Arial, 'Noto Sans Symbols 2', sans-serif; }
+    body {
+      font-family: 'Noto Serif Hebrew', serif;
+      direction: rtl;
+      background: #f7f3ec;
+      color: #1a1209;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .page-header {
+      width: 100%; max-width: 680px;
+      border-bottom: 2px solid #2b1d08;
+      padding-bottom: 0.5rem; margin-bottom: 2rem;
+      position: relative; text-align: center;
+    }
+    .page-header-text { display: inline-block; }
+    .page-header h1 { font-size: 1.3rem; font-weight: 600; color: #2b1d08; }
+    .page-header .author { font-size: 0.95rem; color: #7a6040; font-style: italic; margin-top: 0.25rem; }
+    .print-link {
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%) rotate(8deg);
+      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+      font-size: 0.75rem; font-style: italic; color: #7a6040;
+      text-decoration: none;
+    }
+    .print-link:hover { color: #2b1d08; }
+    .print-link .ti { font-size: 1.4rem; color: #5a3e1b; }
+
+    .content { width: 100%; max-width: 680px; }
+
+    .guide-section { margin-bottom: 2.5rem; }
+
+    .section-title {
+      font-size: 1.1rem; font-weight: 700; color: #2b1d08;
+      border-bottom: 1.5px solid #d4c4a0;
+      padding-bottom: 0.35rem; margin-bottom: 1rem;
+      text-align: center; letter-spacing: 0.02em;
+    }
+
+    hr.separator {
+      border: none; border-top: 1px solid #d4c4a0;
+      margin: 0.5rem auto 2rem; width: 70%;
+    }
+
+    p { line-height: 1.85; margin-bottom: 0.75rem; }
+    ul { padding-right: 1.4rem; margin-bottom: 0.75rem; }
+    li { line-height: 1.85; }
+    strong { font-weight: 600; }
+
+    .callout {
+      border-radius: 4px 0 0 4px;
+      border-right: 4px solid;
+      padding: 0.6rem 0.85rem;
+      margin: 0.75rem 0;
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    .callout-important { background: #fff8e1; border-color: #ffc107; }
+    .callout-aside     { background: #f8f9fa; border-color: #9a9a9a; }
+    .callout p:last-child, .callout ul:last-child, .callout .indicators:last-child { margin-bottom: 0; }
+
+    .indicators { margin: 0.3rem 0 0.75rem; line-height: 2.2; }
+    .indicator {
+      display: inline-block;
+      background: #f1f3f5; border: 1px solid #d8dbe0; border-radius: 3px;
+      padding: 0.1rem 0.5rem; margin: 0.1rem 0.15rem 0.1rem 0;
+      font-weight: 500; color: #495057; font-size: 0.88rem;
+    }
+    .indicator-etc { color: #868e96; font-size: 0.88rem; margin-right: 0.3rem; }
+
+    /* Clue card — filled in by JS */
+    .clue-card {
+      background: #e1f5fe;
+      border: 1px solid #b3e5fc;
+      border-radius: 4px;
+      padding: 0.75rem 1rem 0.65rem;
+      margin: 0.75rem 0;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      position: relative;
+    }
+    .clue-card:hover { background: #b3e5fc; border-color: #81d4fa; }
+    .clue-card-text { font-size: 1.05rem; font-weight: 500; line-height: 1.7; }
+    .clue-card-length { color: #7a6040; font-weight: 300; margin-right: 0.3rem; }
+    .clue-card-num {
+      position: absolute; bottom: 0.3rem; left: 0.5rem;
+      font-size: 0.72rem; color: #90a4ae;
+    }
+
+    /* Solver modal */
+    .solver-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,18,9,0.65);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem;
+    }
+    .solver-overlay.hidden { display: none; }
+    .solver-wrapper {
+      display: flex; flex-direction: column;
+      width: min(480px, 100%);
+      height: min(720px, 90vh);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(43,29,8,0.35);
+    }
+    .solver-toolbar {
+      background: #e8dcc8; border-bottom: 1px solid #d4c4a0;
+      display: flex; align-items: center; justify-content: flex-start;
+      padding: 0.25rem 0.4rem; flex-shrink: 0;
+    }
+    .solver-close-btn {
+      background: none; border: 1px solid #b8a880;
+      border-radius: 3px; width: 1.8rem; height: 1.8rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 0.95rem; color: #5a3e1b;
+    }
+    .solver-close-btn:hover { background: #d4c4a0; }
+    .solver-frame { width: 100%; flex: 1; border: none; display: block; background: #f7f3ec; }
+
+    .page-footer {
+      width: 100%; max-width: 680px;
+      margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid #d4c4a0;
+      display: flex; justify-content: center;
+    }
+    .btn-make {
+      font-family: 'Noto Serif Hebrew', serif;
+      font-size: 1rem; font-weight: 500;
+      color: #5a3e1b; background: #e8dcc8;
+      border: 1px solid #c8b090; border-radius: 4px;
+      padding: 0.55rem 1.1rem;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem;
+      text-decoration: none;
+    }
+    .btn-make:hover { background: #d4c4a0; }
+    .btn-make .ti { font-size: 1.1rem; }
+
+    @media (max-width: 540px) {
+      html { font-size: 16px; }
+      .solver-wrapper { width: 100%; height: 100dvh; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="page-header-text">
+    <h1>כיטרע רעטענישן</h1>
+    <p class="author">מיט חזקי פֿישער</p>
+  </div>
+  <a class="print-link" href="cryptic-guide.pdf">
+    <i class="ti ti-printer"></i>
+    דאָס קען מען<br>אויך אָפּדרוקן
+  </a>
+</header>
+
+<div class="content">
+
+<!-- CONTENT_START -->
+  <div class="guide-section">
+    <p>לאָמיר אָנהײבן מיט אַ בײַשפּיל:</p>
+    <div class="clue-example" data-key="גאַנדי"></div>
+    <p>דער <strong>פּשוט פּשט</strong> איז ווי אַזױ עס לייענט זיך אויפֿן ערשטן בליק.</p>
+    <div class="callout callout-aside">
+    <p>אַ גוטער פּשוטער פּשט זאָל זיין אַ פֿאַרשטענדלעכע פֿראַזע וואָס מען קען געפֿינען אין אַ שמועס אָדער בוך, וואָס איז אינטערעסאַנט אָדער וויציק, און פֿאַרפֿירט דעם לייזער פֿון דער כיטרער באַדייטונג.</p>
+    </div>
+    <p>געלײענט <strong>קריפּטיש</strong>, האָט עס געוויינטלעך צוויי טיילן:</p>
+    <ul>
+      <li><strong>דעפֿיניציע</strong>: אַ רמז צום ענטפֿער.</li>
+      <li><strong>װערטערשפּיל</strong>: אַ וועג צו בויען דעם ענטפֿער.</li>
+    </ul>
+    <div class="callout callout-aside">
+    <p>די דעפֿיניציע איז כּמעט אייביק בײַם אָנהייב אָדער סוף אַז מען זאָל עס קענען לײענען אזױ:</p>
+    <ul>
+      <li><strong>אָנהייב</strong>: "כּדי צו [דעפֿיניציע], טו [װערטערשפּיל]"</li>
+      <li><strong>סוף</strong>: "טו [װערטערשפּיל] צו באַקומען [דעפֿיניציע]"</li>
+    </ul>
+    </div>
+    <p>די װערטערשפּיל קען אַנטהאַלטן:</p>
+    <ul>
+      <li><strong>שטאָף</strong>: אותיות און ווערטער מיט װאָס צו שפּילן.</li>
+      <li><strong>װעגװײַזערס</strong>: ווערטער וואָס הײסן וואָס צו טאָן מיטן שטאָף.</li>
+    </ul>
+    <div class="callout callout-important">
+    <p>אין אַ קעסטל רעטעניש נוצט מען נישט נקודות, סוף־אותיות, אָדער צונױפֿגעשטעלטע אותיות. אַלזאָ: אָ&thinsp;=&thinsp;אַ&thinsp;=&thinsp;א, ב&thinsp;=&thinsp;בּ&thinsp;=&thinsp;בֿ, וּ&thinsp;=&thinsp;ו, ייִ =&thinsp;ײַ&thinsp;=&thinsp;ײ, כ&thinsp;=&thinsp;כּ&thinsp;=&thinsp;ך, מ&thinsp;=&thinsp;ם, נ&thinsp;=&thinsp;ן, פּ&thinsp;=&thinsp;פ&thinsp;=&thinsp;פֿ&thinsp;=&thinsp;ף, צ&thinsp;=&thinsp;ץ, ש&thinsp;=&thinsp;שׁ&thinsp;=&thinsp;שׂ, ת&thinsp;=&thinsp;תּ.  ײ, װ, ױ, זענען צװײ אותיות.</p>
+    </div>
+    <p>יעצט װעלן מיר רעדן װעגן פֿאַרשידענע געדאַנקען װאָס װערן גענוצט אין קריפּטישע רעטענישן.</p>
+  </div>
+
+  <hr class="separator" />
+
+  <div class="guide-section">
+    <div class="section-title">אנאגראַמען</div>
+    <p>נעמט עטלעכע אותיות און מישט זיי אויס.</p>
+    <p><strong>װעגװײַזערס</strong>: ווערטער וואָס מיינען רירן, באַוועגונג, ענדערונג אָדער אומאָרדענונג: <span class="indicator">מישן</span><span class="indicator">וואַרפֿן</span><span class="indicator">צעשטערן</span><span class="indicator">מאָדנע</span><span class="indicator">טאַנצן</span><span class="indicator">בערך</span><span class="indicator">מאַניפּולירן</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="callout callout-important">
+    <p>דער װעגװײַזער מוז זיין גלײַך נעבן דעם שטאָף.</p>
+    </div>
+    <div class="clue-example" data-key="קאַװע"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">באַהאַלטען</div>
+    <p>אַ <strong>באַהאַלטענער</strong> רמז האָט יעדן נויטיקן אות אינעם ריכטיקן סדר, אָבער מען מוז זײ טרעפֿן.</p>
+    <p><strong>װעגװײַזערס</strong>: <span class="indicator">באַהאַלטן</span><span class="indicator">אַנטדעקן</span><span class="indicator">אינהאַלט</span><span class="indicator">אין</span><span class="indicator">(גע)האַלטן</span><span class="indicator">כאַפּן</span><span class="indicator">אַ טײל</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="clue-example" data-key="געלט"></div>
+    <div class="callout callout-aside">
+    <p>פּינטעלעך קענען זײן זײער װיכטיק אָדער גאָרנישט מײנען.</p>
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">אױסקלײַבערס</div>
+    <p>נעמט ספּעציפֿישע אותיות פֿון װערטער.</p>
+    <p><strong>װעגװײַזערס</strong>: זאָגן װעלכע אותיות צו נעמען: <span class="indicator">קאָפּ</span><span class="indicator">עק</span><span class="indicator">האַרץ</span><span class="indicator">אינהאַלט</span><span class="indicator">געדערעם</span><span class="indicator">גרענעצן</span><span class="indicator">מאַנטל</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="callout callout-important">
+    <p>אויב מען דאַרף נעמען פֿון עטלעכע װערטער וועט דער װעגװײַזער זיין בלשון־רבים: <span class="indicator">קעפּ</span><span class="indicator">עקן</span><span class="indicator-etc">אא״װ</span></p>
+    </div>
+    <div class="clue-example" data-key="טאַדאַ"></div>
+    <div class="callout callout-aside">
+    <p>װערטער װאָס <strong>פֿאַרבינדן</strong> די דעפֿיניציע מיט די װערטערשפּיל זענען נאָר דאָ צו העלפֿן דעם פּשוטן פּשט: <span class="indicator">צו</span><span class="indicator">פֿון</span><span class="indicator">דאַן</span><span class="indicator">און</span><span class="indicator-etc">אא״װ</span></p>
+    </div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">אויסמעקן</div>
+    <p>װאַרף אַװעק ספּעציפֿישע אותיות פֿון װערטער. ענלעך צו אױסקלײַבערס נאָר מען װאַרפֿט אַװעק די אותיות.</p>
+    <p><strong>װעגװײַזערס</strong>: <span class="indicator">(פֿאַר)קירצן</span><span class="indicator">פֿאַרקלענערן</span><span class="indicator">אויסגערייניקט</span><span class="indicator">אָן</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="callout callout-aside">
+    <p>אױסמעקן אַרבעט נאָך בעסער װען מען נוצט עס צוזאַמען מיט אַנדערע אופֿנים.</p>
+    </div>
+    <div class="clue-example" data-key="בלער"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">איבערדרײען</div>
+    <p>נעמט עטלעכע אותיות און לייענט זיי פֿאַרקערט.</p>
+    <div class="callout callout-aside">
+    <p>איבערדרײען אַרבעט נאָך בעסער צוזאַמען מיט אױסקלײַבערס אָדער באַהאַלטענע רמזים.</p>
+    </div>
+    <p><strong>װעגװײַזערס</strong>: <span class="indicator">צוריק</span><span class="indicator">צוריקגעקערט</span><span class="indicator">אַרום</span><span class="indicator">אויסגעדרייט</span><span class="indicator">אין שפּיגל</span><span class="indicator">דרייען</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="clue-example" data-key="שטאָך"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">קאַסטנס</div>
+    <p>לײגט עפּעס אַרײַן אין עפּעס אַנדערש.</p>
+    <p><strong>װעגװײַזערס</strong>: <span class="indicator">אינעווייניק</span><span class="indicator">אין</span><span class="indicator">אַרײַנלייגן</span><span class="indicator">אַרום</span><span class="indicator">אינדרויסן פֿון</span><span class="indicator">כאַפּן</span><span class="indicator">אַרומנעמען</span><span class="indicator">טראָגן</span><span class="indicator">שפּרינגט אַרײַן</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="clue-example" data-key="קערט"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">פֿאַרבײַטן</div>
+    <p>פֿאַרבײַט איין וואָרט אָדער פֿראַזע פֿאַר עפּעס אַנדערש.</p>
+    <div class="callout callout-important">
+    <p>נישטאָ דאָ קײן װעגװײַזערס! יעדעס וואָרט קען פֿאַרביטן ווערן.</p>
+    </div>
+    <ul>
+      <li><strong>סינאָנימען</strong>: פֿאַרבײַטן מיט עפּעס װאָס האָט אַן ענלעכן באַדײַט.</li>
+      <li><strong>פֿאַרקירצונג</strong>: נאָר אַ קירצערער סינאָנים: <span class="indicator">צ״ב</span><span class="indicator">ב״ה</span><span class="indicator">אא״װ</span></li>
+    </ul>
+    <div class="clue-example" data-key="ענגע בענגע"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">האָמאָפֿאָנען</div>
+    <p>פֿאַרבײַט עפּעס מיט עפּעס אַנדערש וואָס האָט דעם זעלבן קלאַנג.</p>
+    <div class="callout callout-aside">
+    <p>עס זענען דאָ אַ סך דיאַלעקטן אין דער וועלט.</p>
+    </div>
+    <p><strong>װעגװײַזערס</strong>: <span class="indicator">געהערט</span><span class="indicator">גערעדט</span><span class="indicator">אויפֿן ראַדיאָ</span><span class="indicator">אויפֿן טעלעפֿאָן</span><span class="indicator-etc">אא״װ</span></p>
+    <div class="callout callout-important">
+    <p>דער האָמאָפֿאָן קען זײַן פֿון אַ פֿאַרבײַטונג.</p>
+    </div>
+    <div class="clue-example" data-key="באָרד"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">שפּילן אין שאַראַדן</div>
+    <p>שטעל צוזאַמען אַן ענטפֿער פֿון פֿאַרשידענע טײלן.</p>
+    <div class="clue-example" data-key="אלף־בית"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">פּונקט אַזוי</div>
+    <p>דער גאַנצער רמז איז סײַ די דעפֿיניציע און סײַ די װערטערשפּיל.</p>
+    <p><strong>װעגװײַזערס</strong>: אָפֿט נוצט מען אַ <span class="indicator">!</span> צו װײַזן אַז עס איז אַזאַ מין רמז, אָבער נישט יעדע <span class="indicator">!</span> מוז דאָס מיינען.</p>
+    <div class="callout callout-aside">
+    <p>עס קען אױך זײן אַז דער גאַנצער רמז איז װערטערשפּיל אָבער נאָר אַ חלק איז די דעפֿיניציע, אָדער פֿאַרקערט.</p>
+    </div>
+    <div class="clue-example" data-key="ייִדיש־װאך"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">טאָפּלטע דעפֿיניציע</div>
+    <p>דער רמז באַשטײט אין גאַנצן פֿון צװײ דעפֿיניציעס.</p>
+    <div class="callout callout-aside">
+    <p>געװײנטלעך, האָמאָגראַפֿן: װערטער װאָס האָבן די זעלבע אותיות אָבער אַנדערע באַדײַטונגען.</p>
+    </div>
+    <div class="clue-example" data-key="פּלאַץ"></div>
+  </div>
+
+  <div class="guide-section">
+    <div class="section-title">געמישטע בײַשפּילן</div>
+    <div class="clue-example" data-key="יהי אור"></div>
+    <div class="clue-example" data-key="גבאי"></div>
+    <div class="clue-example" data-key="קינאה"></div>
+    <div class="clue-example" data-key="שור הבר"></div>
+    <div class="clue-example" data-key="מורד"></div>
+    <div class="clue-example" data-key="װאך"></div>
+    <div class="clue-example" data-key="זיכער"></div>
+    <div class="clue-example" data-key="נאכטמאל"></div>
+  </div>
+  <!-- CONTENT_END -->
+
+</div>
+
+<footer class="page-footer">
+  <button class="btn-make" id="btn-make">
+    <i class="ti ti-edit"></i>מאַך אַ רעטעניש
+  </button>
+</footer>
+
+<!-- Solver modal -->
+<div class="solver-overlay hidden" id="solver-overlay">
+  <div class="solver-wrapper">
+    <div class="solver-toolbar">
+      <button class="solver-close-btn sym-x" id="solver-close" aria-label="שליסן">✕</button>
+    </div>
+    <iframe class="solver-frame" id="solver-frame" src=""></iframe>
+  </div>
+</div>
+
+<script>const _clueData = {"גאנדי":"WyLXkNa3INeg15LXmdeTINeU76yv15gg15bXmdeaINem16LXnteZ16nXmCDXkNeV158g16LXqCDXlNeQ1rjXmCDXktei15bXkNa415LXmCDXpta115DXqtaw15vWttedINec1rDXqda414HXnNeV1rnXnSDXkNeV15nXoyDXoteg15LXnNeZ16kiLCLXku+srteg15PXmSIsItee15nXqSDXkNex16Eg17TXkNa3INeg15LXmdeT17Qg16bXlSDXnu+srteb158g17TXku+srteg15PXmde0INew76yv16Eg15TvrK/XmCDXktei15bvrK/XkteYINem1rXXkNeq1rDXm9a2150g15zWsNep1rjXgdec15XWudedINeQ15XXmdejINei16DXktec15nXqS4iLCLXtNeU76yv15gg15bXmdeaINem16LXnteZ16nXmNe0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXoNeQ15LXqNeQ1rfXnda+17DXoteS17DXsta315bXoteoLiIsIte015DWtyDXoNeS15nXk9e0INeQ15nXliDXqdeY15DWuNejLiIsIte016LXqCDXlNeQ1rjXmCDXktei15bXkNa415LXmCDXpta115DXqtaw15vWttedINec1rDXqda414HXnNeV1rnXnSDXkNeV15nXoyDXoteg15LXnNeZ16nXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXQ","קאווע":"WyLXotehINeS15nXkdeYINeb1rzXldeXINeQ1rfXsNei16fXpteV15zXsdek1r/XnyIsIten76yu17DXoiIsIte076yu17DXoten17Qg15PvrK7XqNejINec17HvrY7XnyDXpteVINeV15XXoteo158g17TXp++srtew16LXtCDXsO+sr9ehINeS15nXkdeYINeb1rzXldeXLiIsIte016bXlSDXnNex16TWv9ef17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNeg15DXkteo15DWt9ed1r7XsNei15LXsNey1rfXltei16guIiwi17TXkNa317DXoten17Qg15DXmdeWINep15jXkNa416MuIiwi17TXotehINeS15nXkdeYINeb1rzXldeX17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0","טאדא":"WyLXmNep16LXqNei16TWvNeQ1rfXm9ei16Eg15DXmdefINeT16LXqCDXkNa415bXoteo16Ig16nXmNei16fXnyDXkNa316jXldeZ16Eg15bXmdeZ16LXqNeiINen16LXpNa8INem15Ug15bXkNa415LXnyDXkteZ15Eg15DWtyDXp9eV16chIiwi15jvrK7Xk++sriIsIte015jXqdei16jXotek1rzXkNa315vXotehINeQ15nXnyDXk9ei16gg15DWuNeW16LXqNei17Qg16nXmNei16fXnyDXkNa316jXldeZ16Eg15bXmdeZ16LXqNeiINen16LXpNa8LCDXk++sr9ehINeU17LXodeYLCDXktei15HXnyDXlteZ15nXoteo16Ig16LXqNep15jXoiDXkNeV16rXmdeV16og16bXlSDXtNeW15DWuNeS158g15LXmdeRINeQ1rcg16fXlden17Q6INeY76yu15PvrK4hIiwi17TXqdeY16LXp9efINeQ1rfXqNeV15nXoSDXlteZ15nXoteo16Ig16fXotek1rzXtCDXkNeZ15Yg15DWtyDXsNei15LXsNey1rfXltei16guIiwi16LXoSDXkNeZ15Yg15DWt9efINeQ17HXoden15zXsta315HXoteo1r7XsNei15LXsNey1rfXltei16guIiwi17TXmNep16LXqNei16TWvNeQ1rfXm9ei16Eg15DXmdefINeT16LXqCDXkNa415bXoteo16LXtCDXkNeZ15Yg16nXmNeQ1rjXoy4iLCLXtNeW15DWuNeS158g15LXmdeRINeQ1rcg16fXlden17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0","בלער":"WyLXkdeZ15zXmdeQ1rjXoNei16gg16fXotefINeW15nXmiDXoNeZ16nXmCDXkO+sn9eg15TXkNa315zXmNefINeQ15XXnyDXldeV16LXqNeYINek1rzXqNei157Xmdei16gg157Xmdeg15nXodeY16LXqCDXpNa/15XXnyDXoteg15LXnNeQ1rfXoNeTIiwi15HXnNei16giLCLXtNeR15nXnNeZ15DWuNeg16LXqNe0INen16LXnyDXlteZ15og16DXmdep15gg15DvrJ/XoNeU15DWt9ec15jXnywg15PvrK/XoSDXlNey16HXmCDXoteoINen16LXnyDXoNeZ16nXmCDXlO+srtec15jXnyDXk9eZINeQ15XXqteZ15XXqiDXtNeQ15nXmdeg17Qg15DXmdefINeW15nXmiwg15DXldefIO+tju+srteo15zXmdeo15gg15bXsiwg15DXldefINew76yv16Eg15HXnO+sn9eR15gg15DXmdeR16LXqCDXsNei16jXmCDXtNeR15zXoteo17QsINeQ15XXnyDXmO+sr9eg15kg15HXnNei16gg15DXmdeWIO+sriDXktei17DXoteW16LXoNei16gg16TWvNeo16LXnteZ16LXqCDXnteZ16DXmdeh15jXoteoINek1r/XldefINei16DXktec15DWt9eg15MuIiwi17TXp9ei158g15bXmdeaINeg15nXqdeYINeQ17LWt9eg15TXkNa315zXmNef17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNex16HXntei16fXn9a+17DXoteS17DXsta315bXoteoLiIsIte015HXmdec15nXkNa416DXoteo17Qg15DXmdeWINep15jXkNa416MuIiwi17TXpNa816jXotee15nXoteoINee15nXoNeZ16HXmNei16gg16TWv9eV158g16LXoNeS15zXkNa316DXk9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","געלט":"WyLXkNa3INeR15nXodecINeS16LXnOKApiDXmNeV16DXp9ec1r7Xkteo15nXn+KApiIsIteS16LXnNeYIiwi76yuINeR15nXodecIO+tjteV158g17TXktei15wg15jXldeg16fXnNe0INeQ15nXliDXktei15zXmCDXsO+sr9ehINeQ15nXliDXkteo15nXny4iLCLXtNeQ1rcg15HXmdeh15zXtCDXkNeZ15Yg15DWtyDXsNei15LXsNey1rfXltei16guIiwi16LXoSDXkNeZ15Yg15DWtyDXkdeQ1rfXlNeQ1rfXnNeY15/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtNeS16LXnCDXmNeV16DXp9ec17Qg15DXmdeWINep15jXkNa416MuIiwi17TXkteo15nXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","שטאכ":"WyLXm++sr9eY16kg16bXldeo15nXp9a+16DXmdeZ16LXnyDvrK7XkdeZ16HXnCIsItep15jvrK/XmiIsIte015vvrK/XmNep17Qg16bXldeo15nXpywg15PvrK/XoSDXlNey16HXmCDXsNei158g157XotefINec17LXoteg15gg17TXm++sr9eY16nXtCDvrY7XldefINec15nXoNen16Eg15DXsdejINeo16LXm9eY16Eg17DXoteo15gg16LXoSDXtNep15jvrK/Xmte0INew76yv16Eg15DXmdeWIO+srteR15nXodecINeg17LXotefLiIsIte016bXldeo15nXp9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXmdeR16LXqNeT16jXsta+17DXoteS17DXsta315bXoteoLiIsIte015vXkNa415jXqde0INeQ15nXliDXqdeY15DWuNejLiIsIte016DXmdeZ16LXnyDXkNa315HXmdeh15zXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXQ","ענגע בענגע":"WyLXke+sn9ehIO+srteo76yf158g15DXmdefINee76yv15LXoteo16IsINee76yv15LXoteo16Ig16DXkNa316jXmdep16fXmdeZ15jXnyIsItei16DXkteiINeR16LXoNeS16IiLCLvrK7XnyDvrK7XoNeT16LXqNeiINew76yv16jXmCDvrY7vrK7XqCDXtNee76yv15LXoteo16LXtCDXkNeZ15Yg17TXoteg15LXote0LCDXsNei16jXmCDXtNee76yv15LXoteo16Ig157vrK/Xktei16jXote0INe016LXoNeS16Ig16LXoNeS16LXtC4g15HvrJ/XoSDXsNei16jXmCDXk9eZINeQ15XXqiDXkS4g76yu15Yg157XotefINec17LXkteYINe015HXtCDvrK7XqO+sn9efINeQ15nXnyDXtNei16DXkteiINei16DXktei17Qg15HvrK7Xp9eV157XmCDXntei158g17TXoteg15LXoiDXkdei16DXktei17Qg17DvrK/XoSDXkNeZ15Yg16DXkNa316jXmdep16fXmdeZ15jXny4iLCIg17TXnteQ1rjXktei16jXoiwg157XkNa415LXoteo16LXtCDXkNeZ15Yg16nXmNeQ1rjXoy4iLCLXntei158g15PvrK7XqNejINeR17LXmNefINeT16LXnSDXsO+sr9eo15gg17TXnteQ1rjXktei16jXote0IO+tju+srteoIO+sriDXodeZ16DvrK/XoNeZ150uIiwi17TXke+sn9eh17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINeR15nXmdeY158g15PXotedINew76yv16jXmCDXtNeR76yf16HXtCDvrY7vrK7XqCDXou+thNei16Eg76yu16DXk9ei16jXqS4iLCLXtNeQ1rfXqNey1rfXnyDXkNeZ15/XtCDXkNeZ15Yg15DWtyDXsNei15LXsO+sn9eW16LXqC4iLCLXotehINeQ15nXliDvrK4g16fXkNa316HXmNef1r7XsNei15LXsNey1rfXltei16guIiwi157XotefINeT76yu16jXoyDXnNey15LXnyDXk9eZINeR17LXmNeV16DXkiDvrY7XldefINe015HvrJ/Xode0INeQ15nXoNei15XXldeZ15nXoNeZ16cg762O15XXnyDXk9eZINeR17LXmNeV16DXkiDvrY7XldefICDXtNee15DWuNeS16LXqNeiLCDXnteQ1rjXktei16jXote0LiIsIte016DXkNa316jXmdep16fXmdeZ15jXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","קערט":"WyLXoteoIO+tjteQ1rfXnNeYINeQ1rfXqNey1rfXnyDXkNeZ158g15zXsteT15nXkten17LXmCDXkNeV158g16jXmdeZ16DXmden15giLCLXp9ei16jXmCIsItec17LXk9eZ15LXp9ey15gsINeT76yv16Eg15TXsteh15gg157XotefINec17LXk9eZ16fXmCDXkNex16Eg17TXp9ey15jXtCDXsNei16jXmCDXtNen15jXtC4g76yu15Yg157XotefINec17LXkteYINe016LXqNe0INeQ15nXnyDXtNen15jXtCDXp9eo15nXkteYINee16LXnyDXtNen16LXqNeY17Qg17DvrK/XoSDXntey16DXmCDXtNeo17LXoNeZ16fXmNe0LiIsIte015zXsteT15nXkte0INeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg76yu158g15DXsdeh157Xoten158g17DXoteS17DvrJ/Xltei16guIiwi17TXp9ey15jXtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg157vrK7Xm9efINe016fXsteY17Qg15zXsteT15nXpy4iLCLXtNek1r/XkNa315zXmCDXkNa316jXsta3158g15DXmdef17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWIO+sriDXp9eQ1rfXodeY15/Wvtew16LXktew17LWt9eW16LXqC4iLCJcItei16jXtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg15zXsteS158g17TXoteo17Qg15DXmdeg16LXldeV15nXmdeg15nXpyDvrY7XldefINeT15kg15zXsteT15nXp9eiINe016fXsteY17QuIiwi17TXqNeZ15nXoNeZ16fXmNe0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","יהי אור":"WyLXkdeo15DXqdeZ16o6INeZ16LXk9efINeU17LXnNeZ16fXnyDXmdeZ1rTXk9ehINeQ15XXmdei16gg15TXoteo15gg15LXkNa415jXoSDXke+sru+tjtei15wiLCLXmdeU15kg15DXldeoIiwi17TXkdeo15DXqdeZ16rXtCwg762O15XXnyDvrK/XoNeU17LXkSDvrY7XldefINe015nXoteT158g15TXstec15nXp9efINeZ15nWtNeT16HXtCDXkNeZ15Yg17TXmdeU15nXtC4g17TXkNex16LXqNe0INeU16LXqNeYINee17LXoNeYINee16LXnyDXlteV15vXmCDvrK4g17DvrK/XqNeYINew76yv16Eg16fXnNeZ16DXkteYINew15kg17TXkNex16LXqNe0IO+srteW17Eg17DXmSDXtNeQ15XXqNe0LiDXtNeZ15TXmSDXkNeV16jXtCDXkNeZ15Yg15LXkNa415gn16Eg15HvrK7vrY7XotecLiIsIte015HXqNeQ16nXmdeq17Qg157Xsteg15gg17TXkNeZ158g76yv16DXlNey15HXtC4iLCLXtNeR16jXkNep15nXqte0INeQ15nXliDXkCDXsNei15LXsNey1rfXltei16guIiwi17TXkdeo15DXqdeZ16rXtCDXkNeZ15Yg15DWt9efINeQ17HXoden15zXsta315HXoteo1r7XsNei15LXsNey1rfXltei16guIiwi17TXmdei15PXnyDXlNey15zXmden158g15nXmda015PXode0INeQ15nXliDXqdeY76yv16MuIiwi17TXlNei16jXmNe0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3INeU15DWuNee15DWuNek1r/XkNa415/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtNeQ17HXoteo17Qg15DXmdeWINep15jvrK/Xoy4iLCLXtNeS15DWuNeY16Eg15HXkNa316TWv9ei15zXtCDXkNeZ15Yg15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXQ","אלפבית":"WyLXnNeV15nXoyDXkNeZ16DXk9eo15XXmdeh158hIO+sriDXme+sndeTINeT16jXqdeg15gg16DvrK/XmiDXkNeZ158g15zXqdeV158g16fXldeT16kg15DXmdeg16LXldeV15nXmdeg15nXpywg762O15XXnyDvrK/XoNeU15nXmdeRINeR15nXltefINeh15XXoyDXldeV76yv16Eg15DXmdeWINeS16LXqdeo15nXkdefINeQ15nXnyDXk9eZINeh762O16gg762K15XXqNeUIiwi15DXnNej1r7XkdeZ16oiLCLXtNec15XXmdej17Qg15DXmdeg15PXqNeV15nXodefINee76yu15vXmCDXtNec762O17QuINe076yuINeZ76yd15Mg15PXqNep16DXmNe0INeU17LXodeYINei762E16LXoSDXsO+sr9ehINen15zXmdeg15LXmCDXsNeZINe015nvrJ3Xk9e0INew76yv16Eg16fXotefINeW17LXnyDXk9eZINeQ15XXqiDXmS4g76yv15HXoteoINeT16LXnSDXmSDXnNey15LXmCDXntei158g16DvrK/XmiDXtNeQ15nXnyDXnNep15XXnyDXp9eV15PXqde0LiDXtNeQ15nXn9e0INeQ17HXoyDXnNep15XXnyDXp9eV15PXqSDXkNeZ15Yg15PXmSDXkNeV16og15EuINec17LXkteYINee16LXnyDXmSDXoO+sr9eaINeRLiDXkdeZ15Yg15nXotem15gg15TvrK/XmCDXntei158g17TXnO+tjteR15nXtC4g157XotefINec17LXkteYINeT76yv16Eg15DXmdeg16LXldeV15nXmdeg15nXpyDXtO+tjteV158g76yv16DXlNeZ15nXkSDXkdeZ15bXnyDXodeV16PXtCwg15PvrK/XoSDXlNey16HXmCDXtNeQ16rXtCwg15PXmSDXoteo16nXmNeiINeQ17HXoSDXpteV150g15zXotem15jXny4g15DXldefIO+srteWINee16LXnyDXnNey15LXmCDXtNec762O15HXmde0INeQ15nXnyDXtNeQ16rXtCDXke+srten15XXnteYINee16LXnyDXtNeQ15zXo9a+15HXmdeq17Qg15XXle+sr9ehINeQ15nXliDXktei16nXqNeZ15HXnyDXkNeZ158g15PXmSDXoe+tjteoIO+titeV16jXlC4iLCLXtNeQ15nXoNeT16jXldeZ16HXn9e0INeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg76yu158g15DXsdeh16fXnNey1rfXkdei16jWvtew16LXktew17LWt9eW16LXqC4iLCLXtNec17HXo9e0INeQ15nXliDXqdeY76yv16MuIiwi17TXk9eo16nXoNeY17Qg15DXmdeWIO+sriDXsNei15LXsO+sn9eW16LXqC4iLCLXotehINeQ15nXliDvrK4g15TXkNa4157XkNa416TWv9eQ1rjXn9a+17DXoteS17DXsta315bXoteoLiIsIte0IO+sriDXme+sndeT17Qg15DXmdeWINep15jvrK/Xoy4iLCLXtNeQ15nXnyDXnNep15XXnyDXp9eV15PXqde0INee17LXoNeYINeT15kg17DvrK/XqNeYINe015DXmdef17Qg15LXoteW76yv15LXmCDXkNeZ158g15zXqdeV158g16fXmdeT76yrLiIsIte016DvrK/Xmte0INee17LXoNeYINem15Ug15jXldeZ16nXnyDXk9eZINeh15PXqCDXkNeV158g15zXsteS16LXnyDXou+thNei16Eg16DvrK/XmiDXou+thNei16Eg76yu16DXk9ei16jXqS4iLCLXtO+tjteV158g76yv16DXlNeZ15nXkSDXkdeZ15bXnyDXodeV16PXtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg16LXoSDXkdey15jXnyDvrY7vrK7XqCDXou+thNei16Eg17DvrK/XoSDXkNeZ15Yg762O15XXnyDvrK/XoNeU17LXkSDXkdeZ15bXnyDXodeV16MuIiwi17TXkNeZ16DXoteV15XXmdeZ16DXmden17Qg15DXmdeWIO+sriDXsNei15LXsNey15bXoteoLiIsItei16Eg15DXmdeWIO+sriDXp9eQ1rfXodeY15/Wvtew16LXktew17LWt9eW16LXqC4iLCLXtNew15DWuNehINeQ15nXliDXktei16nXqNeZ15HXnyDXkNeZ158g15PXmSDXodek1r/XqCDXqta815XXqNeU17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0","יידישוואכ":"WyLXnteQ1rfXntei1r7XnNep15XXnyDXqdec76yv762O15gg16DXmdep15gg15nXotem15ghIiwi15nvrJ3Xk9eZ16nWvtew15DXmiIsIteT15kg17TXnteQ1rfXntei1r7XnNep15XXn9e0INeQ15nXliDXtNeZ76yd15PvrJ3Xqde0LCDXkNa315XXldeQ1rfXk9eiLiDXkNex15Eg157XotefINep15zvrK/vrY7XmCDXoNeZ16nXmCDXmdei16bXmCDXkNeZ15Yg157XotefINew76yu15ouINem15XXlu+srtee16LXnyDXnu+srteb15gg15PvrK/XoSDXtNeZ76yd15PXmdep1r7XsO+sr9ea17Qg15DXldefINeZ16LXpteYINeR16LXqdeQ1rfXoSDXme+sndeT76yd16kg17DvrK/XmiDXqdec76yv762O15gg16DXmdep15gg15PXmSDXnu+srtee16LWvtec16nXldefISIsIte0157XkNa3157Xota+15zXqdeV15/XtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg16LXoSDXkdey15jXnyDvrY7vrK7XqCDXou+thNei16Eg76yu16DXk9ei16jXqS4iLCLXtNep15zXkNa416TWv9eYINeg15nXqdeYINeZ16LXpteY17Qg15DXmdeWINep15jvrK/Xoy4iLCLXntei158g15PvrK7XqNejINei16Eg15HXsteY158g762O76yu16gg16LvrYTXotehIO+srteg15PXoteo16kuIiwi15PXkNa416Eg15DXmdeWINeQ1rcg17TXpNa815XXoNen15gg15DWt9eW15XXmde0OiDXk9ei16gg15LXkNa316DXptei16gg16jXnteWINeQ15nXliDXkNex15og15PXmSDXk9ei16TWv9eZ16DXmdem15nXoi4iXQ","פלאצ":"WyLXkNex16TWv9eo17LWt9eh158g76yu158g76yv16jXmCIsIu+thNec76yu16UiLCLXkNex16TWv9eo17LWt9eh158sINei16fXoe+thNec76yv15PXmdeo1586IO+thNec76yu16UuINeQ15XXnyDvrK7XnyDvrK/XqNeYINeQ15nXliDXkNex15og76yuIO+thNec76yu16UiLCLXk9eQ1rjXoSDXkNeZ15Yg15DWtyDXmNeQ1rjXpNa815zXmNeiINeT16LXpNa/15nXoNeZ16bXmdeiOiDXptew17Ig15HXkNa315PXsta315jXny4iLCLXtNeQ17HXpNa/16jXsta316HXn9e0INeQ15nXliDXkNeZ15nXnyDXk9ei16TWv9eZ16DXmdem15nXoi4iLCLXtNeQ1rfXnyDXkNa416jXmNe0INeQ15nXliDXk9eZINem17DXsteY16Ig15PXotek1r/Xmdeg15nXpteZ16IuIl0","גבאי":"WyLXk9eo15nXmSDXlteZ15og15DWt9eo15XXnSDXme+sndeT16LXnNeiIDHWvjLWvjMsINeQ15XXnyDXlNei15zvrY7XmCDvrK7XqNex16Eg15DXmdefINep15XXnCEiLCLXkteR15DXmSIsIteZ76yd15PXotec16Ig15DXmdeWINe015nXtC4gMda+Mta+MyDXkNeZ15Yg17TXkNa+15HWvteS17QuINem15XXlu+srtee16LXnyDXnu+srteb15gg16LXoSDXtNeZ15DXkdeS17QuINeT16jXsiDXlteZ15og76yu16jXldedINe015nXkNeR15LXtCDXpteVINew16LXqNefINe015LXkdeQ15nXtCDXsO+sr9ehINeU16LXnO+tjteYIO+srteo17HXoSDXkNeZ158g16nXldecLiIsIte015nXmda015PXotec16LXtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg16LXoSDXkdey15jXnyDvrY7vrK7XqCDXou+thNei16Eg76yu16DXk9ei16jXqS4iLCLXtDHWvjLWvjPXtCDXkNeZ15Yg16nXmO+sr9ejLiIsItee16LXnyDXk++srteo16Mg15nXoteT16Ig16DXldee16LXqCDXkdey15jXnyDvrY7vrK7XqCDXou+thNei16Eg762O15XXnyDvrK4g15HvrK7Xp++srteg15jXoiDXodeT16guIiwi17TXk9eo15nXmSDXlteZ15og15DWt9eo15XXnde0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXmdeR16LXqNeT16jXsta+17DXoteS17DXsta315bXoteoLiIsIte015TXotec16TWv9eYINeQ1rfXqNex16Eg15DXmdefINep15XXnNe0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","בארד":"WyLvrK7Xk9eo15HXkCwg76yuINee76yv15wg15PvrK7XqNejIO+sriDXqNeR1r8g15TvrK/XqCIsIteR76yv16jXkyIsIte076yuINee76yv15zXtCDXlNey16HXmCDXoNeZ16nXmCDXmdei15PXoiDXkNeV16ouINeQ762O16nXqCDXmdei15PXoiDvrK7XoNeT16LXqNeiINeQ15XXqj8g15nXoteT16Ig76yu16DXk9ei16jXoiDXkNeV16og762O15XXnyDXtNeT76yu16jXoyDvrK4g16jXkda/17Qg15DXmdeWINe015PXqNeQ15HXtC4g17TvrK7Xk9eo15HXkNe0INee17LXoNeYIO+tju+srteo16fXoteo15guINeQ17HXkSDXntei158g15zXstei16DXmCDXtNeT16jXkNeR17Qg762O76yu16jXp9ei16jXmCDXlO+sr9eYINee16LXnyDXtNeR76yv16jXk9e0INew76yv16Eg15DXmdeWINeU76yv16guIiwi17TXkNa3INee15DWuNec17Qg15DXmdeWIO+sriDXsNei15LXsO+sn9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXsdeh16fXnNey1rfXkdei16jWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeT15DWt9eo16Mg15DWtyDXqNeR1r/XtCDXkNeZ15Yg16nXmO+sr9ejLiIsIte015Ag157vrK/XnNe0ICDXntey16DXmCDvrK7XliDXoNeZ16nXmCDXqdeY16LXoNeT15nXpywg16DXmdep15gg15nXoteT16LXoSDXkNeV16ouIiwi17TXkNa315PXqNeR15DXtCDXnu+sn9eg15gg762O76yu16jXp9ei16jXmC4iLCLXotehINeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg15DWt9efINeQ15nXkdei16jXk9eo17LWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeU15DWuNeo17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0","קינאה":"WyLXoNei157XmCDXpteV16jXmdenINeT16LXnSDXlNeQ1rjXoNeZ16cg76yu15Yg15PXlSDXldeV15nXnNeh15gg16LXqCDXlteQ1rjXnCDXoNeZ16nXmCDXlNeQ1rjXkdefIiwi16fXmdeg15DXlCIsIteQ17HXkSDXntei158g16DXotee15gg17TXlO+sr9eg15nXp9e0INem15XXqNeZ16cg17DXoteo15gg16LXoSDXtNen15nXoNeQ15TXtCDXsO+sr9ehINee17LXoNeYIO+srteWINeT15Ug15XXldeZ15zXodeYINei16gg15bXkNa415wg16DXmdep15gg15TXkNa415HXny4iLCLXtNeg16LXnteYINem15XXqNeZ16fXtCDXkNeZ15Yg15DWtyDXsNei15LXsNey1rfXltei16guIiwi16LXoSDXkNeZ15Yg15DWt9efINeQ15nXkdei16jXk9eo17LWvtew16LXktew17LWt9eW16LXqC4iLCLXtNeU15DWuNeg15nXp9e0INeQ15nXliDXqdeY15DWuNejLiIsIte015DWt9eWINeT15Ug15XXldeZ15zXodeYINei16gg15bXkNa415wg16DXmdep15gg15TXkNa415HXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","שור הבר":"WyLXk9eZINei16jXqdeY16Ig16nXkdeq15nXnSDXldeV16LXmCDXqNeX15wg15TXotec762O158g15HXqNei16DXktei158g16jXmdeg15PvrY7XnNeZ15nXqSDXldeV76yv16Eg157XmdeoINeV15XXotec158g16LXodefIiwi16nXldeoINeU15HXqCIsIteT15kg16LXqNep15jXoiDXkNeV16rXmdeV16og762O15XXnyDXtNep15HXqteZ150g15XXldei15gg16jXl9ecINeU16LXnO+tjtefINeR16jXoteg15LXotefINeo15nXoNeT762O15zXmdeZ16nXtCDXltei16DXotefINe016nXldeoINeU15HXqNe0INeV15XvrK/XoSDXnteZ16gg15XXldei15zXnyDXoteh158g17DXotefINee16nXmdeXINew16LXmCDXp9eV157XotefLiIsIte015PXmSDXoteo16nXmNei17Qg15DXmdeWINeQ1rcg17DXoteS17DXsta315bXoteoLiIsItei16Eg15DXmdeWINeQ1rfXnyDXkNex16HXp9ec17LWt9eR16LXqNa+17DXoteS17DXsta315bXoteoLiIsIte016nXkdeq15nXnSDXldeV16LXmCDXqNeX15wg15TXotec16TWv9efINeR16jXoteg15LXotefINeo15nXoNeT16TWv9ec15nXmdep17Qg15DXmdeWINep15jXkNa416MuIiwi17TXldeV15DWuNehINee15nXqCDXldeV16LXnNefINei16HXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","מורד":"WyLXsNeZINeR1rfWvNeoINeb1rzXlda515vWsNeR1rjXkCDvrY7XldefINeT16jXldedINen15XXnteYINem15XXqNeZ16ciLCLXnteV16jXkyIsIte015PXqNeV153XtCDXtNen15XXnteYINem15XXqNeZ16fXtCDXpteVINee76yu15vXnyDXtNee15XXqNeT17QsIO+srteW76yuINee15nXnyDXntei16DXmNepINe017DXmSDXsNeZINeR1rfWvNeoINeb1rzXlda515vWsNeR1rjXkNe0LiIsIte016fXldee15gg16bXldeo15nXp9e0INeQ15nXliDXkNa3INew16LXktew17LWt9eW16LXqC4iLCLXotehINeQ15nXliDXkNa3158g15DXmdeR16LXqNeT16jXsta+17DXoteS17DXsta315bXoteoLiIsIte015PXqNeV153XtCDXkNeZ15Yg16nXmNeQ1rjXoy4iLCLXtNew15kg15HWt9a816gg15vWvNeV1rnXm9aw15HWuNeQ17Qg15DXmdeWINeT15kg15PXotek1r/Xmdeg15nXpteZ16IuIl0","וואכ":"WyLXkNeV15nXoyDvrK4g16nXmNeZ16cg16bvrJ/XmCIsItew15DXmiIsIteT76yv16Eg15DXmdeWIO+sriDXmNeQ1rjXpNa815zXmNeiINeT16LXpNa/15nXoNeZ16bXmdeiOiDXsNei158g157XotefINeQ15nXliDXtNeQ17HXo9e0INeQ15nXliDXntei158g17TXsO+srtea17QuIO+sriDXtNew76yv15rXtCDXkNeZ15Yg76yuINep15jXmdenINem76yf15guIiwi15PXkNa416Eg15DXmdeWINeQ1rcg15jXkNa416TWvNec15jXoiDXk9ei16TWv9eZ16DXmdem15nXojog16bXsNeyINeR15DWt9eT17LWt9eY158uIiwi17TXkNeV15nXo9e0INeQ15nXliDXkNeZ15nXnyDXk9ei16TWv9eZ16DXmdem15nXoi4iLCLXtNeQ1rcg16nXmNeZ16cg16bXsta315jXtCDXkNeZ15Yg15PXmSDXptew17LXmNeiINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","זיכער":"WyIxMDAlINew16LXmCDXoteoINeW15nXmiDXnNei16jXoNei158g15jXkNa316DXptefIiwi15bXmdeb16LXqCIsIte016LXqCDXlteZ15rXtCDXsNei15gg15zXoteo16DXotefINeY76yu16DXptefLCDXk++sr9ehINeU17LXodeYLCDXk9eZINeQ15XXqteZ15XXqiDXtNei16gg15bXmdea17Qg15jvrK7XoNem158g76yu16jXldedINem15Ug157vrK7Xm9efINe015bXmdeb16LXqNe0INeQ15XXnyDXsNei158g16LvrYTXotehINeQ15nXliAxMDAlINeQ15nXliDXotehINeW15nXm9ei16guIiwi17TXsNei15ggLi4uINec16LXqNeg16LXnyDXmO+srteg16bXn9e0INeQ15nXliDvrK4g17DXoteS17DvrJ/Xltei16guIiwi16LXoSDXkNeZ15Yg76yu158g76yu16DvrK7Xkteo76yu153Wvtew16LXktew76yf15bXoteoLiIsIte016LXqCDXlteZ15rXtCDXkNeZ15Yg16nXmO+sr9ejLiIsIte0MTAwJde0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd","נאכטמאל":"WyLigaY5IC0gMSArIDggeCDXoteh15/igakiLCLXoNeQ15vXmNee15DXnCIsIteg16LXnteYINeQ15XXldei16cg15PXotedINen15zXkNa316DXkiDXpNa/15XXnyBcIteQ15nXmdefXCIg16TWv9eV158gXCLXoNeZ15nXn1wiLCDXnO+sr9eW15gg16DvrK/XqCDXkNeZ15HXoteoINe016DXtC4gXCI4XCIg17DXoteo15gg17TvrK7Xm9eY17Qg15DXldefINe0eFwiINew16LXqNeYINe0157vrK/XnNe0LiDXtCvXtCDXnteZ15nXoNeYINem15XXlu+srtee16LXnyDXnNeZ15nXktei158g15DXldefINem15XXlu+srtee16LXnyDXnu+srteb15gg16LXoSDXtNeg76yu15vXmNee76yv15zXtCDXsO+sr9ehINeQ15nXliDXoteh158uIiwi157XmdeoINeT15DWt9eo16TWv9efINeQ15XXmdeh15jXldeZ16nXnyDXk9eZINeg15XXntei16jXny4iLCLXtNeg15nXmdef17Qg76yv158g15PXmSDXp9ec76yu16DXkiDvrY7XldefINe015DXmdeZ15/XtCAg15DXmdeWINeg76yv16gg17TXoNe0LiIsIjgg15DXmdeWINe076yu15vXmNe0LiIsIte016DXtCArINe076yu15vXmNe0INeQ15nXliDXtNeg76yu15vXmNe0LiIsIte0eFwiINeQ15nXliDXtNee76yv15zXtC4iLCLXtNei16HXn9e0INeQ15nXliDXk9eZINeT16LXpNa/15nXoNeZ16bXmdeiLiJd"};</script>
+
+<script src="normalize.js"></script>
+<script>
+  // ── Hebrew normalisation + length spec (mirrors cryptic.html) ──
+  // normaliseHebrew / answerToLengthSpec / formatLengthSpec live in normalize.js (loaded above).
+
+  function b64decode(str) {
+    try {
+      const padded = str + '==='.slice((str.length + 3) % 4);
+      const bin = atob(padded);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch(e) { return null; }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Render clue cards ──
+  let clueCounter = 0;
+
+  // normalizeKey lives in normalize.js.
+
+  function renderClueCards() {
+    if (typeof _clueData === 'undefined') return;
+    document.querySelectorAll('.clue-example[data-key]').forEach(el => {
+      const key = normalizeKey(el.getAttribute('data-key'));
+      const b64 = _clueData[key];
+      if (!b64) { el.remove(); return; }
+      const puzzle = b64decode(b64);
+      if (!puzzle) { el.remove(); return; }
+      const question = puzzle[0];
+      const answer   = puzzle[1];
+      clueCounter++;
+      const n = clueCounter;
+      const spec = formatLengthSpec(answerToLengthSpec(answer));
+      const card = document.createElement('div');
+      card.className = 'clue-card';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', question);
+      card.innerHTML =
+        `<div class="clue-card-text">${escapeHtml(question)}&nbsp;<span class="clue-card-length">${escapeHtml(spec)}</span></div>` +
+        `<div class="clue-card-num">${n}</div>`;
+      card.addEventListener('click', () => openSolver(b64));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSolver(b64); } });
+      el.replaceWith(card);
+    });
+  }
+
+  // ── Solver modal ──
+  const overlay = document.getElementById('solver-overlay');
+  const frame   = document.getElementById('solver-frame');
+
+  function openModal(src) {
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    frame.style.opacity = '0';
+    frame.onload = () => { frame.style.opacity = '1'; frame.onload = null; };
+    frame.src = src;
+  }
+
+  function openSolver(b64) {
+    openModal('cryptic.html?embed#d=' + encodeURIComponent(b64));
+  }
+
+  function closeSolver() {
+    overlay.classList.add('hidden');
+    frame.src = '';
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('solver-close').addEventListener('click', closeSolver);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeSolver(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSolver(); });
+  window.addEventListener('message', e => { if (e.data === 'solver-escape') closeSolver(); });
+  document.getElementById('btn-make').addEventListener('click', () => openModal('cryptic.html?embed#create'));
+
+  renderClueCards();
+</script>
+</body>
+</html>
