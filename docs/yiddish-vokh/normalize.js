@@ -100,10 +100,29 @@ function formatLengthSpec(spec) {
   return '(' + spec.replace(/ /g, ', ') + ')';
 }
 
+// ── Clue-text markup ──
+// Clue text (clues.txt / grid clue text, line 1 of a block) may wrap a run in
+// [[...]] to mark it for smaller rendering (e.g. the "small" word in a "say
+// what you see" clue). Mirrored in lib.typ's clue-markup-segments() for the
+// PDF; both are checked against tests/clue-markup-cases.json.
+function parseClueMarkup(str) {
+  const segments = [];
+  const re = /\[\[(.+?)\]\]/g;
+  let pos = 0, m;
+  while ((m = re.exec(str)) !== null) {
+    if (m.index > pos) segments.push({ text: str.slice(pos, m.index), small: false });
+    segments.push({ text: m[1], small: true });
+    pos = re.lastIndex;
+  }
+  if (pos < str.length) segments.push({ text: str.slice(pos), small: false });
+  return segments;
+}
+
 // Make the functions available to Node-based tests without affecting the browser.
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     EXPLICIT_MAP, FINAL_MAP, normaliseHebrew, normalizeKey,
     ANSWER_SEP_CHARS, ANSWER_SEP_RE, answerToLengthSpec, parseLengthSpec, formatLengthSpec,
+    parseClueMarkup,
   };
 }

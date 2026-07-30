@@ -54,6 +54,22 @@ function makeCellInput() {
   return cell;
 }
 
+// Append `text` (clue text, possibly containing [[...]] "render smaller"
+// markup — see normalize.js's parseClueMarkup) into `parentEl` as a mix of
+// plain text nodes and <span class="clue-small"> nodes.
+function appendClueMarkup(parentEl, text) {
+  parseClueMarkup(text).forEach(seg => {
+    if (seg.small) {
+      const span = document.createElement('span');
+      span.className = 'clue-small';
+      span.textContent = seg.text;
+      parentEl.appendChild(span);
+    } else {
+      parentEl.appendChild(document.createTextNode(seg.text));
+    }
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 // Base64 <-> JSON codec — the single shared path for data baked in at build
 // time (cryptic.html's _pd blob, grid.html's _pgd blob) and #d= share links.
@@ -192,7 +208,7 @@ function revealNextLetterIn(cellStates, answer, lock) {
 // Make the functions available to Node-based tests without affecting the browser.
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    KB_ROWS, buildKeyboard, makeCellInput, b64encode, b64decode,
+    KB_ROWS, buildKeyboard, makeCellInput, appendClueMarkup, b64encode, b64decode,
     isModalOpen, openModal, closeModal,
     HINT_LABELS, renderHints, renderSolvedDetails, revealNextLetterIn,
   };

@@ -18,6 +18,10 @@ body {
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 input, textarea { font-family: inherit; }
 
+/* A clue-text run marked with [[...]] (see normalize.js's parseClueMarkup) —
+   e.g. the "small" in a "say what you see" clue like "a half [[dollar]]". */
+.clue-small { font-size: 0.75em; }
+
 .page-header {
   width: 100%;
   max-width: 600px;

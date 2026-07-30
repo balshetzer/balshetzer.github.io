@@ -868,7 +868,7 @@
     // Clear clue element from any previous puzzle
     const clueEl = document.getElementById('clue-text');
     clueEl.innerHTML = '';
-    clueEl.appendChild(document.createTextNode(puzzleData.clue));
+    appendClueMarkup(clueEl, puzzleData.clue);
     const lenSpan = document.createElement('span');
     lenSpan.className = 'clue-length';
     lenSpan.textContent = ' ' + formatLengthSpec(String(puzzleData.length).trim());

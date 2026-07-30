@@ -759,7 +759,7 @@
     const body = setModal(w.word);
     const clue = document.createElement('div');
     clue.className = 'hint-item';
-    clue.textContent = w.clue ? w.clue : w.word;
+    appendClueMarkup(clue, w.clue ? w.clue : w.word);
     body.appendChild(clue);
     const details = document.createElement('div');
     renderSolvedDetails(details, w.explanation, w.hints || []);
@@ -814,7 +814,7 @@
       num.className = 'gclue-num';
       num.textContent = w.number + '.';
       const text = document.createElement('span');
-      text.appendChild(document.createTextNode((w.clue ? w.clue : w.word) + ' '));
+      appendClueMarkup(text, (w.clue ? w.clue : w.word) + ' ');
       const len = document.createElement('span');
       len.className = 'gclue-len';
       len.textContent = wordLengthSpec(w);
@@ -856,7 +856,8 @@
       item.appendChild(num);
       item.appendChild(document.createTextNode(' '));
       item.appendChild(dir);
-      item.appendChild(document.createTextNode(' ' + (w.clue ? w.clue : w.word) + ' '));
+      item.appendChild(document.createTextNode(' '));
+      appendClueMarkup(item, (w.clue ? w.clue : w.word) + ' ');
       item.appendChild(len);
       item.appendChild(document.createTextNode(' '));
       item.appendChild(keyBtn);
