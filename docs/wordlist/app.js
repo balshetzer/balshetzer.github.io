@@ -1,9 +1,9 @@
 // app.js — the screen. The rules live in logic.js, the GitHub calls in api.js.
 import { ApiError, GitHub } from "./api.js";
 import {
-  TIERS, createSync, decisionFor, hiddenSet, newOutbox, nextItem,
-  normsFromRepo, pushDecision, pushSkip, remaining, requestRun, saveWork,
-  undo, workDecisions,
+  TIERS, createSync, decisionFor, flushOutcome, hiddenSet, newOutbox,
+  nextItem, normsFromRepo, outcomeText, pushDecision, pushSkip, remaining,
+  requestRun, saveWork, shouldAnnounce, undo, workDecisions,
 } from "./logic.js";
 
 const REPO = "balshetzer/yiddish-cryptics";
@@ -46,24 +46,34 @@ const sync = createSync(() => state.outbox, {
   sent: (norms) => { for (const n of norms) state.sentRecently[n] = Date.now(); },
 });
 
-async function flush({ quiet = true } = {}) {
-  if (!state.token) return;
+// manual: a button was pressed, so say what happened (see announce).
+async function flush({ manual = false } = {}) {
+  if (!state.token) {
+    announce({ status: "token" }, manual);
+    return { error: null, noToken: true };
+  }
   const result = await sync.flush();
   render();
-  if (result.error) report(result.error, quiet);
+  announce(flushOutcome(result), manual);
   if (result.ran) pollRun();
   return result;
 }
 
 // ------------------------------------------------------------------ refresh
 let refreshing = false;
-// Returns "ok", "failed", or why nothing was done: "token", "offline", "busy".
-async function refresh({ quiet = true } = {}) {
-  if (!state.token) return "token";
-  if (!navigator.onLine) return "offline";
-  if (refreshing) return "busy";
+async function refresh({ manual = false } = {}) {
+  const outcome = await fetchRepoState();
+  announce(outcome, manual);
+  return outcome;
+}
+
+// Returns an outcome (see logic.js); says nothing itself.
+async function fetchRepoState() {
+  if (!state.token) return { status: "token" };
+  if (!navigator.onLine) return { status: "offline" };
+  if (refreshing) return { status: "busy" };
   refreshing = true;
-  let outcome = "ok";
+  let outcome = { status: "ok" };
   try {
     const gh = github();
     const [queueText, overrides, excluded, myWords, inboxNames] = await Promise.all([
@@ -82,12 +92,12 @@ async function refresh({ quiet = true } = {}) {
     state.repoDecided = [...normsFromRepo({ overrides, excluded, myWords, inbox })];
     persist();
   } catch (e) {
-    report(e, quiet);
-    outcome = "failed";
+    outcome = { status: "failed", error: e };
   } finally {
     refreshing = false;
     render();
   }
+  if (outcome.status === "ok") outcome.left = remaining(state.queue.items, hidden());
   return outcome;
 }
 
@@ -214,16 +224,11 @@ function dismissToast() {
 }
 $("toast").addEventListener("click", dismissToast);   // anywhere on the banner
 
-function report(error, quiet) {
-  if (error instanceof ApiError && error.kind === "network") {
-    if (!quiet) toast("Can't reach GitHub. Your work is saved on this device.");
-  } else if (error instanceof ApiError && error.kind === "auth") {
-    toast("GitHub rejected the token. Open Settings to replace it.");
-  } else if (error instanceof ApiError && error.kind === "forbidden") {
-    toast(`GitHub says no: ${error.message}. The token may be missing a permission.`);
-  } else {
-    toast(error?.message || "Something went wrong.");
-  }
+// The one place the app talks to you about how something went.
+function announce(outcome, manual) {
+  if (!shouldAnnounce(outcome, manual)) return;
+  const text = outcomeText(outcome);
+  if (text) toast(text);
 }
 
 // ------------------------------------------------------------------ actions
@@ -260,31 +265,27 @@ $("save").addEventListener("click", () => {
   if (!saveWork(state.outbox, state.work, Date.now())) return;
   persist();
   render();
-  flush({ quiet: false });
+  flush({ manual: true });
 });
 $("run").addEventListener("click", () => {
   requestRun(state.outbox);
   persist();
   render();
-  flush({ quiet: false });
+  flush({ manual: true });
 });
-// The ↻ button spins while it works, then says what happened.
+// The ↻ button spins while it works; announce() then says what happened.
 $("refresh").addEventListener("click", async () => {
   const button = $("refresh");
   if (button.classList.contains("spinning")) return;
   button.classList.add("spinning");
   try {
-    const [, outcome] = await Promise.all([
-      flush({ quiet: false }).then(() => refresh({ quiet: false })),
+    await Promise.all([
+      (async () => {
+        const sent = await flush({ manual: true });
+        if (!sent.error && !sent.noToken) await refresh({ manual: true });
+      })(),
       sleep(700),                  // long enough to be seen on a fast connection
     ]);
-    if (outcome === "ok") {
-      toast(`Up to date · ${remaining(state.queue.items, hidden())} left`);
-    } else if (outcome === "offline") {
-      toast("Offline. Your work is saved on this device.");
-    } else if (outcome === "token") {
-      toast("Open Settings to connect to GitHub.");
-    }                              // "failed": refresh() already said why
   } finally {
     button.classList.remove("spinning");
   }
@@ -314,7 +315,7 @@ $("connect").addEventListener("click", async () => {
     $("connection").textContent = "Connected.";
     $("token").value = "";
     showSettings(false);
-    await refresh({ quiet: false });
+    await refresh({ manual: true });
     await flush();
   } catch (e) {
     $("connection").textContent = e instanceof ApiError && e.kind === "auth"

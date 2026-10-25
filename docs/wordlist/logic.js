@@ -229,3 +229,41 @@ export function normsFromRepo({ overrides = "", excluded = "", myWords = "", inb
   norms.delete("");
   return norms;
 }
+
+// ---------------------------------------------------------------- messages
+// What happened, as the banner should say it. An outcome is
+// {status, left?, error?}: "ok" (left = words still to review), "failed",
+// "offline", "token" (not connected), "busy", or "silent" (nothing to say).
+export function errorText(error) {
+  switch (error?.kind) {
+    case "network": return "Can't reach GitHub. Your work is saved on this device.";
+    case "auth": return "GitHub rejected the token. Open Settings to replace it.";
+    case "forbidden":
+      return `GitHub says no: ${error.message}. The token may be missing a permission.`;
+    default: return error?.message || "Something went wrong.";
+  }
+}
+
+export function outcomeText(outcome) {
+  switch (outcome.status) {
+    case "ok": return `Up to date · ${outcome.left} left`;
+    case "offline": return "Offline. Your work is saved on this device.";
+    case "token": return "Open Settings to connect to GitHub.";
+    case "busy": return "Already refreshing. Try again in a moment.";
+    case "failed": return errorText(outcome.error);
+    default: return null;
+  }
+}
+
+// After a button press (manual) every outcome is reported; in the background
+// only real problems are, and not just being offline or out of reach.
+export function shouldAnnounce(outcome, manual) {
+  if (outcome.status === "silent") return false;
+  if (manual) return true;
+  return outcome.status === "failed" && outcome.error?.kind !== "network";
+}
+
+// The outcome of a sync.flush() result.
+export function flushOutcome(result) {
+  return result.error ? { status: "failed", error: result.error } : { status: "silent" };
+}
