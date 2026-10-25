@@ -1,0 +1,15 @@
+{
+  "name": "Wordlist",
+  "short_name": "Wordlist",
+  "description": "Review and score the Yiddish word list",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14181a",
+  "theme_color": "#14181a",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

@@ -2,36 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://api.github.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#14181a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wordlist">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
 <title>Wordlist</title>
-<style>
-  :root { --bg: #fbfaf7; --fg: #1d1c1a; --dim: #6b675f; --line: #d9d5cb; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #151413; --fg: #ece9e2; --dim: #9a958b; --line: #34312d; }
-  }
-  html { background: var(--bg); color: var(--fg); }
-  body { font: 17px/1.5 system-ui, sans-serif; max-width: 34rem;
-         margin: 0 auto; padding: 2rem 16px; }
-  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
-  p { margin: .5rem 0; }
-  .dim { color: var(--dim); font-size: .9rem; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 1.5rem 0; }
-</style>
 </head>
 <body>
-<h1>Wordlist</h1>
-<p class="dim">Placeholder. The review tools are not built yet.</p>
-<hr>
-<p id="build" class="dim">Checking which version this is&hellip;</p>
-<script>
-  fetch("build.json", {cache: "no-store"})
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(b => { document.getElementById("build").textContent =
-      "Published from yiddish-cryptics @ " + b.commit.slice(0, 7) +
-      " on " + b.published; })
-    .catch(() => { document.getElementById("build").textContent =
-      "No build information found."; });
-</script>
+<div id="app">
+  <header>
+    <h1>Wordlist</h1>
+    <span id="left" class="dim"></span>
+    <button id="refresh" class="icon" aria-label="Refresh from GitHub">&#x21bb;</button>
+    <button id="open-settings" class="icon" aria-label="Settings">&#x2699;</button>
+  </header>
+
+  <main id="review">
+    <section id="card" hidden>
+      <div id="badges"></div>
+      <div id="word" dir="rtl" lang="yi"></div>
+      <div id="auto"></div>
+      <div id="gloss"></div>
+      <div id="meta" class="dim"></div>
+    </section>
+    <section id="empty" hidden>
+      <p id="empty-text"></p>
+    </section>
+
+    <div id="tiers"></div>
+    <div id="more">
+      <button id="remove" class="secondary danger">Not a word</button>
+      <button id="skip" class="secondary">Skip</button>
+      <button id="undo" class="secondary">Undo</button>
+    </div>
+  </main>
+
+  <footer>
+    <div id="status" class="dim" role="status"></div>
+    <div id="actions">
+      <button id="save" class="primary">Save</button>
+      <button id="run" class="primary">Run</button>
+    </div>
+  </footer>
+
+  <div id="toast" role="alert" hidden></div>
+
+  <section id="settings" hidden>
+  <div class="panel">
+    <h2>Settings</h2>
+    <p class="dim">The app reads and writes the private repo through the GitHub API with a token kept only on this device.</p>
+    <label for="token">GitHub token</label>
+    <input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_&hellip;">
+    <div class="row">
+      <button id="connect" class="primary">Connect</button>
+      <button id="sign-out" class="secondary">Sign out</button>
+    </div>
+    <p id="connection" class="dim"></p>
+    <details>
+      <summary>How to make the token</summary>
+      <ol>
+        <li>GitHub &rarr; Settings &rarr; Developer settings &rarr; Fine-grained tokens &rarr; Generate new token.</li>
+        <li>Repository access: only <b>balshetzer/yiddish-cryptics</b>.</li>
+        <li>Permissions: <b>Contents</b> read and write, <b>Actions</b> read and write.</li>
+        <li>Pick an expiry you can live with, then paste the token above.</li>
+      </ol>
+    </details>
+    <hr>
+    <p><span id="snoozed-count">0</span> skipped words are hidden for a while.
+      <button id="unskip" class="secondary">Show them again</button></p>
+    <p id="version" class="dim"></p>
+    <button id="close-settings" class="primary wide">Done</button>
+  </div>
+  </section>
+</div>
+<script type="module" src="app.js"></script>
 </body>
 </html>
