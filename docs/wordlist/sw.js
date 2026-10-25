@@ -23,7 +23,10 @@ const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new E
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
-    const response = await Promise.race([fetch(request), timeout(4000)]);
+    // no-cache: ask the server every time (a cheap "not modified" when
+    // nothing changed), so GitHub Pages' 10-minute max-age cannot serve a
+    // stale copy right after a publish
+    const response = await Promise.race([fetch(request, { cache: "no-cache" }), timeout(4000)]);
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
