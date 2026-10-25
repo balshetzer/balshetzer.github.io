@@ -9,8 +9,11 @@
 //   sentRecently {norm: ms}          uploaded decisions, hidden until the
 //                                    pipeline has folded them into the queue
 //
-// A decision is {norm, word, kind: "word"|"candidate", action: "score"|
-// "remove", score?}.
+// A decision is {norm, word, kind: "word"|"candidate"|"rated"|"excluded",
+// action: "score"|"remove", score?}. "rated" and "excluded" are words being
+// revisited (see the revisit list); a revisit entry in `work` is
+// {type: "revisit", norm, decision | null, prev}: decision is null when the
+// answer was "still right" and nothing needs saving.
 
 export const TIERS = [["great", 95], ["good", 75], ["okay", 55], ["poor", 35]];
 export const SNOOZE_DAYS = 14;
@@ -46,6 +49,7 @@ export function decisionLines(d) {
   if (d.action === "remove") return [`remove\t${d.norm}\t${first}`];
   const lines = [];
   if (d.kind === "candidate") lines.push(`add\t${first}`);
+  if (d.kind === "excluded") lines.push(`restore\t${d.norm}`);  // before its score
   lines.push(`score\t${d.norm}\t${d.score}`);
   return lines;
 }
@@ -64,9 +68,24 @@ export function pushSkip(work, snoozed, norm, now) {
   snoozed[norm] = now + SNOOZE_DAYS * DAY;
 }
 
+// Revisiting a word: the word is hidden for SNOOZE_DAYS whatever the answer.
+// decision is null when the answer was "still right".
+export function pushRevisit(work, snoozed, norm, decision, now) {
+  work.push({ type: "revisit", norm, decision, prev: snoozed[norm] ?? null });
+  snoozed[norm] = now + SNOOZE_DAYS * DAY;
+}
+
+// Does this answer to a revisit item leave things as they were? Same tier as
+// before, or "not a word" for a word that is already excluded.
+export function isConfirm(item, action, score) {
+  if (item.kind === "rated") return action === "score" && score === item.mine;
+  if (item.kind === "excluded") return action === "remove";
+  return false;
+}
+
 export function undo(work, snoozed) {
   const entry = work.pop();
-  if (entry && entry.type === "skip") {
+  if (entry && (entry.type === "skip" || entry.type === "revisit")) {
     if (entry.prev == null) delete snoozed[entry.norm];
     else snoozed[entry.norm] = entry.prev;
   }
@@ -76,7 +95,10 @@ export function undo(work, snoozed) {
 // Final decision per word: a later one replaces an earlier one.
 export function workDecisions(work) {
   const out = new Map();
-  for (const e of work) if (e.type === "decision") out.set(e.decision.norm, e.decision);
+  for (const e of work) {
+    if (e.type === "decision") out.set(e.decision.norm, e.decision);
+    else if (e.type === "revisit" && e.decision) out.set(e.norm, e.decision);
+  }
   return out;
 }
 
@@ -200,6 +222,17 @@ export function hiddenSet({ work, outbox, sentRecently, repoDecided, snoozed, no
   return hide;
 }
 
+// What hides a word being revisited: this session's answers and the
+// snooze. The repo's own record of the word is what puts it in this list,
+// so it must not hide it.
+export function revisitHiddenSet({ work, outbox, snoozed, now }) {
+  const hide = new Set();
+  for (const e of work) if (e.type === "revisit" || e.type === "decision") hide.add(e.norm ?? e.decision.norm);
+  for (const b of outbox.batches) for (const n of Object.keys(b.decisions)) hide.add(n);
+  for (const [n, expiry] of Object.entries(snoozed)) if (expiry > now) hide.add(n);
+  return hide;
+}
+
 export function nextItem(items, hide) {
   return items.find((item) => !hide.has(item.norm)) || null;
 }
@@ -290,4 +323,16 @@ export function lookupLinks(item) {
     appIntent: "intent:#Intent;action=android.intent.action.SEND;type=text/plain;"
       + `package=com.google.android.apps.translate;S.android.intent.extra.TEXT=${q};${fallback};end`,
   };
+}
+
+// -------------------------------------------------------------- new words
+// A word typed in by hand: {decision} to push onto the work stack, or
+// {error} to show. It is saved like an accepted candidate: the word is added
+// to the list and given the chosen score.
+export function newWordDecision(text, score) {
+  const word = text.replace(/\s+/g, " ").trim();
+  const norm = normalize(word);
+  if (!norm) return { error: "Type the word in Hebrew letters." };
+  if (word.includes("/")) return { error: "One spelling at a time." };
+  return { decision: { norm, word, kind: "candidate", action: "score", score } };
 }

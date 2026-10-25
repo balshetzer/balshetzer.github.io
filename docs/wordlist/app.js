@@ -1,9 +1,10 @@
 // app.js — the screen. The rules live in logic.js, the GitHub calls in api.js.
 import { ApiError, GitHub } from "./api.js";
 import {
-  TIERS, createSync, decisionFor, flushOutcome, hiddenSet, newOutbox,
-  lookupLinks, nextItem, normsFromRepo, outcomeText, pushDecision, pushSkip, remaining,
-  requestRun, saveWork, shouldAnnounce, undo, workDecisions,
+  TIERS, createSync, decisionFor, flushOutcome, hiddenSet, isConfirm,
+  lookupLinks, newOutbox, newWordDecision, nextItem, normsFromRepo, outcomeText, pushDecision,
+  pushRevisit, pushSkip, remaining, requestRun, revisitHiddenSet, saveWork,
+  shouldAnnounce, undo, workDecisions,
 } from "./logic.js";
 
 const REPO = "balshetzer/yiddish-cryptics";
@@ -16,7 +17,8 @@ function loadState() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(STATE_KEY)); } catch { /* none */ }
   const s = {
-    token: "", queue: { items: [], fetchedAt: 0 }, repoDecided: [],
+    token: "", queue: { items: [], fetchedAt: 0 }, revisit: { items: [] },
+    repoDecided: [],
     work: [], outbox: newOutbox(), sentRecently: {}, snoozed: {}, lastRun: null,
     ...(saved || {}),
   };
@@ -76,8 +78,9 @@ async function fetchRepoState() {
   let outcome = { status: "ok" };
   try {
     const gh = github();
-    const [queueText, overrides, excluded, myWords, inboxNames] = await Promise.all([
+    const [queueText, revisitText, overrides, excluded, myWords, inboxNames] = await Promise.all([
       gh.getText("wordlist/data/review_queue.json"),
+      gh.getText("wordlist/data/revisit_queue.json"),
       gh.getText("wordlist/input/overrides.tsv"),
       gh.getText("wordlist/input/excluded_words.txt"),
       gh.getText("wordlist/input/my_words.txt"),
@@ -89,6 +92,7 @@ async function fetchRepoState() {
     if (queueText) {
       state.queue = { items: JSON.parse(queueText).items, fetchedAt: Date.now() };
     }
+    if (revisitText) state.revisit = { items: JSON.parse(revisitText).items };
     state.repoDecided = [...normsFromRepo({ overrides, excluded, myWords, inbox })];
     persist();
   } catch (e) {
@@ -97,7 +101,7 @@ async function fetchRepoState() {
     refreshing = false;
     render();
   }
-  if (outcome.status === "ok") outcome.left = remaining(state.queue.items, hidden());
+  if (outcome.status === "ok") outcome.left = current().left;
   return outcome;
 }
 
@@ -134,13 +138,19 @@ async function pollRun() {
 // ---------------------------------------------------------------- rendering
 const $ = (id) => document.getElementById(id);
 
-function currentItem() {
-  return nextItem(state.queue.items, hidden());
+// The queue first; once it is empty, the words already rated (revisit).
+// -> {item, revisit: whether item comes from that list, left}
+function current() {
+  const hide = hiddenSet({ ...state, now: Date.now() });
+  const item = nextItem(state.queue.items, hide);
+  if (item) return { item, revisit: false, left: remaining(state.queue.items, hide) };
+  const rhide = revisitHiddenSet({ ...state, now: Date.now() });
+  const rest = nextItem(state.revisit.items, rhide);
+  return { item: rest, revisit: Boolean(rest),
+           left: rest ? remaining(state.revisit.items, rhide) : 0 };
 }
 
-function hidden() {
-  return hiddenSet({ ...state, repoDecided: state.repoDecided, now: Date.now() });
-}
+const currentItem = () => current().item;
 
 function ago(ms) {
   const m = Math.round((Date.now() - ms) / 60000);
@@ -157,20 +167,20 @@ function runText() {
 }
 
 function render() {
-  const hide = hidden();
-  const item = nextItem(state.queue.items, hide);
+  const { item, revisit, left } = current();
   const unsaved = workDecisions(state.work).size;
   const waiting = state.outbox.batches.length;
   const haveToken = Boolean(state.token);
 
   $("card").hidden = !item;
   $("empty").hidden = Boolean(item);
-  $("left").textContent = state.queue.items.length ? `${remaining(state.queue.items, hide)} left` : "";
+  $("left").textContent = item ? `${left} ${revisit ? "to revisit" : "left"}` : "";
 
   if (item) {
     const badges = $("badges");
     badges.replaceChildren();
     for (const label of [item.kind === "candidate" ? "new word" : null,
+                         revisit ? "revisit" : null,
                          item.phrase ? "phrase" : null]) {
       if (!label) continue;
       const b = document.createElement("span");
@@ -179,8 +189,9 @@ function render() {
       badges.append(b);
     }
     $("word").textContent = item.word;
-    $("auto").textContent = item.score != null
-      ? `Auto score: ${item.score}` : "Not in the list yet";
+    $("auto").textContent = item.kind === "excluded" ? "Excluded: you said not a word"
+      : item.kind === "rated" ? `Your score: ${item.mine} · Auto: ${item.score}`
+      : item.score != null ? `Auto score: ${item.score}` : "Not in the list yet";
     $("gloss").textContent = item.gloss || "";
     $("meta").textContent = `seen ${item.count.toLocaleString()}×`;
     const links = lookupLinks(item);
@@ -191,8 +202,12 @@ function render() {
     $("empty-text").textContent = !haveToken
       ? "Open Settings to connect to GitHub."
       : state.queue.items.length
-        ? "That's everything in this queue. Save, then Run to get more."
+        ? "Nothing left to review or revisit for now. Save, then Run to get more."
         : "No queue yet. Tap ↻ to fetch it.";
+  }
+  for (const b of document.querySelectorAll(".tier")) {
+    b.classList.toggle("current", Boolean(item) && item.kind === "rated" &&
+                                  b.dataset.score === String(item.mine));
   }
 
   for (const b of document.querySelectorAll(".tier, #remove, #skip")) b.disabled = !item;
@@ -257,7 +272,13 @@ function announce(outcome, manual) {
 function decide(action, score) {
   const item = currentItem();
   if (!item) return;
-  pushDecision(state.work, decisionFor(item, action, score));
+  if (current().revisit) {
+    pushRevisit(state.work, state.snoozed, item.norm,
+                isConfirm(item, action, score) ? null : decisionFor(item, action, score),
+                Date.now());
+  } else {
+    pushDecision(state.work, decisionFor(item, action, score));
+  }
   persist();
   render();
 }
@@ -267,6 +288,7 @@ function buildTiers() {
   for (const [name, score] of TIERS) {
     const b = document.createElement("button");
     b.className = "tier";
+    b.dataset.score = String(score);
     b.textContent = `${name} (${score})`;
     b.addEventListener("click", () => decide("score", score));
     tiers.append(b);
@@ -312,6 +334,47 @@ $("refresh").addEventListener("click", async () => {
     button.classList.remove("spinning");
   }
 });
+
+// ------------------------------------------------------------------ add word
+function showAdd(show) {
+  $("add").hidden = !show;
+  if (show) {
+    $("new-word").value = "";
+    $("add-note").textContent = "";
+    $("new-word").focus();
+  }
+}
+$("open-add").addEventListener("click", () => showAdd(true));
+$("close-add").addEventListener("click", () => showAdd(false));
+
+// A heads-up if the word is already in the lists (it can still be re-scored).
+$("new-word").addEventListener("input", () => {
+  const { decision } = newWordDecision($("new-word").value, 0);
+  const note = $("add-note");
+  if (!decision) { note.textContent = ""; return; }
+  const known = new Set(state.repoDecided);
+  for (const b of state.outbox.batches) for (const n of Object.keys(b.decisions)) known.add(n);
+  for (const n of workDecisions(state.work).keys()) known.add(n);
+  note.textContent = known.has(decision.norm)
+    ? "Already in your lists. Adding scores it again." : "";
+});
+
+for (const [name, score] of TIERS) {
+  const b = document.createElement("button");
+  b.className = "tier";
+  b.textContent = `${name} (${score})`;
+  b.addEventListener("click", () => {
+    const { decision, error } = newWordDecision($("new-word").value, score);
+    if (error) { $("add-note").textContent = error; return; }
+    pushDecision(state.work, decision);
+    persist();
+    render();
+    $("new-word").value = "";
+    $("add-note").textContent = `Added ${decision.word} (${score}). Add another, or Done.`;
+    $("new-word").focus();
+  });
+  $("add-tiers").append(b);
+}
 
 // ----------------------------------------------------------------- settings
 function showSettings(show) {
