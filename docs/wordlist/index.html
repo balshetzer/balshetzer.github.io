@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Wordlist</title>
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1c1a; --dim: #6b675f; --line: #d9d5cb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151413; --fg: #ece9e2; --dim: #9a958b; --line: #34312d; }
+  }
+  html { background: var(--bg); color: var(--fg); }
+  body { font: 17px/1.5 system-ui, sans-serif; max-width: 34rem;
+         margin: 0 auto; padding: 2rem 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  p { margin: .5rem 0; }
+  .dim { color: var(--dim); font-size: .9rem; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+<h1>Wordlist</h1>
+<p class="dim">Placeholder. The review tools are not built yet.</p>
+<hr>
+<p id="build" class="dim">Checking which version this is&hellip;</p>
+<script>
+  fetch("build.json", {cache: "no-store"})
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(b => { document.getElementById("build").textContent =
+      "Published from yiddish-cryptics @ " + b.commit.slice(0, 7) +
+      " on " + b.published; })
+    .catch(() => { document.getElementById("build").textContent =
+      "No build information found."; });
+</script>
+</body>
+</html>
