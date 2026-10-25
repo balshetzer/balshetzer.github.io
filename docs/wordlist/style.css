@@ -52,7 +52,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 6
 #lookup button { display: inline-flex; align-items: center; padding: 6px 12px; }
 #empty { color: var(--dim); }
 
-#tiers, #add-tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tier { min-height: 56px; border-radius: 14px; font-size: 1.15rem; font-weight: 600;
         background: var(--accent); color: var(--on-accent); }
 .tier.current { outline: 3px solid var(--fg); outline-offset: 2px; }
@@ -80,16 +80,19 @@ button.primary.hot { background: var(--accent); color: var(--on-accent); }
 #toast-text { flex: 1; padding: 8px 0; }
 #toast-close { width: 44px; height: 44px; font-size: 1.5rem; border-radius: 10px; }
 
-#settings, #add { position: fixed; inset: 0; z-index: 10; overflow: auto; background: var(--bg);
+#settings { position: fixed; inset: 0; z-index: 10; overflow: auto; background: var(--bg);
             padding: calc(16px + env(safe-area-inset-top)) 16px 24px; }
 .panel { max-width: 34rem; margin: 0 auto; }
-#settings h2, #add h2 { margin: 0 0 8px; }
-#settings label, #add label { display: block; margin: 14px 0 4px; font-weight: 600; }
-#settings input, #add input { width: 100%; font: inherit; padding: 12px; border-radius: 10px;
+#settings h2 { margin: 0 0 8px; }
+#settings label { display: block; margin: 14px 0 4px; font-weight: 600; }
+#settings input { width: 100%; font: inherit; padding: 12px; border-radius: 10px;
                   border: 1px solid var(--line); background: var(--card); color: var(--fg); }
 .row { display: flex; gap: 10px; margin-top: 10px; }
 .row button { flex: 1; min-height: 48px; }
 button.wide { width: 100%; margin-top: 18px; }
 details { margin-top: 12px; } hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
-#add-note { min-height: 1.4em; }
-#add input { font-size: 1.6rem; }
+#new-word { width: 100%; font: inherit; font-size: clamp(2rem, 10vw, 3.2rem); line-height: 1.25;
+            text-align: center; margin: 2px 0; padding: 0 8px; border-radius: 10px;
+            border: 2px dashed var(--accent); background: var(--card); color: var(--fg); }
+button.icon[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+#lookup a:not([href]) { opacity: .4; }

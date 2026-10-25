@@ -63,6 +63,25 @@ export function pushDecision(work, decision) {
   work.push({ type: "decision", decision });
 }
 
+// A word typed in by hand (see newWordDecision), and one the user then said
+// was not a word: that never goes to the server, but stays on the undo stack
+// so undo can bring the typed word back.
+export function pushTyped(work, decision) {
+  work.push({ type: "decision", decision, typed: true });
+}
+
+export function pushDiscard(work, text) {
+  work.push({ type: "discard", text });
+}
+
+// The text to put back in the entry box when this undone entry was typed.
+export function typedText(entry) {
+  if (!entry) return null;
+  if (entry.type === "discard") return entry.text;
+  if (entry.type === "decision" && entry.typed) return entry.decision.word;
+  return null;
+}
+
 export function pushSkip(work, snoozed, norm, now) {
   work.push({ type: "skip", norm, prev: snoozed[norm] ?? null });
   snoozed[norm] = now + SNOOZE_DAYS * DAY;
@@ -326,9 +345,9 @@ export function lookupLinks(item) {
 }
 
 // -------------------------------------------------------------- new words
-// A word typed in by hand: {decision} to push onto the work stack, or
-// {error} to show. It is saved like an accepted candidate: the word is added
-// to the list and given the chosen score.
+// A word typed in by hand: {decision} to push onto the work stack (with
+// pushTyped), or {error} to show. It is saved like an accepted candidate: the
+// word is added to the list and given the chosen score.
 export function newWordDecision(text, score) {
   const word = text.replace(/\s+/g, " ").trim();
   const norm = normalize(word);

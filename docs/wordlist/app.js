@@ -2,9 +2,10 @@
 import { ApiError, GitHub } from "./api.js";
 import {
   TIERS, createSync, decisionFor, flushOutcome, hiddenSet, isConfirm,
-  lookupLinks, newOutbox, newWordDecision, nextItem, normsFromRepo, outcomeText, pushDecision,
-  pushRevisit, pushSkip, remaining, requestRun, revisitHiddenSet, saveWork,
-  shouldAnnounce, undo, workDecisions,
+  lookupLinks, newOutbox, newWordDecision, nextItem, normsFromRepo,
+  outcomeText, pushDecision, pushDiscard, pushRevisit, pushSkip, pushTyped,
+  remaining, requestRun, revisitHiddenSet, saveWork, shouldAnnounce,
+  typedText, undo, workDecisions,
 } from "./logic.js";
 
 const REPO = "balshetzer/yiddish-cryptics";
@@ -18,6 +19,7 @@ function loadState() {
   try { saved = JSON.parse(localStorage.getItem(STATE_KEY)); } catch { /* none */ }
   const s = {
     token: "", queue: { items: [], fetchedAt: 0 }, revisit: { items: [] },
+    entry: null,                // {text} while a new word is being typed in
     repoDecided: [],
     work: [], outbox: newOutbox(), sentRecently: {}, snoozed: {}, lastRun: null,
     ...(saved || {}),
@@ -172,11 +174,17 @@ function render() {
   const waiting = state.outbox.batches.length;
   const haveToken = Boolean(state.token);
 
-  $("card").hidden = !item;
-  $("empty").hidden = Boolean(item);
-  $("left").textContent = item ? `${left} ${revisit ? "to revisit" : "left"}` : "";
+  const entering = Boolean(state.entry);
+  $("card").hidden = !item && !entering;
+  $("empty").hidden = Boolean(item) || entering;
+  $("word").hidden = entering;
+  $("new-word").hidden = !entering;
+  $("open-add").setAttribute("aria-pressed", String(entering));
+  $("left").textContent = item && !entering ? `${left} ${revisit ? "to revisit" : "left"}` : "";
 
-  if (item) {
+  if (entering) {
+    showEntry();
+  } else if (item) {
     const badges = $("badges");
     badges.replaceChildren();
     for (const label of [item.kind === "candidate" ? "new word" : null,
@@ -206,11 +214,13 @@ function render() {
         : "No queue yet. Tap ↻ to fetch it.";
   }
   for (const b of document.querySelectorAll(".tier")) {
-    b.classList.toggle("current", Boolean(item) && item.kind === "rated" &&
+    b.classList.toggle("current", !entering && Boolean(item) && item.kind === "rated" &&
                                   b.dataset.score === String(item.mine));
   }
 
-  for (const b of document.querySelectorAll(".tier, #remove, #skip")) b.disabled = !item;
+  const typed = entering && newWordDecision($("new-word").value, 0).decision;
+  for (const b of document.querySelectorAll(".tier")) b.disabled = entering ? !typed : !item;
+  for (const b of document.querySelectorAll("#remove, #skip")) b.disabled = !entering && !item;
   $("undo").disabled = state.work.length === 0;
 
   $("save").textContent = unsaved ? `Save (${unsaved})` : "Save";
@@ -270,6 +280,18 @@ function announce(outcome, manual) {
 
 // ------------------------------------------------------------------ actions
 function decide(action, score) {
+  if (state.entry) {
+    if (action === "remove") {              // not a word: never sent
+      const text = $("new-word").value.trim();
+      if (text) pushDiscard(state.work, text);
+    } else {
+      const { decision, error } = newWordDecision($("new-word").value, score);
+      if (error) { toast(error); return; }
+      pushTyped(state.work, decision);
+    }
+    setEntry(null);
+    return;
+  }
   const item = currentItem();
   if (!item) return;
   if (current().revisit) {
@@ -297,13 +319,19 @@ function buildTiers() {
 
 $("remove").addEventListener("click", () => decide("remove"));
 $("skip").addEventListener("click", () => {
+  if (state.entry) { setEntry(null); return; }   // cancel the new word
   const item = currentItem();
   if (!item) return;
   pushSkip(state.work, state.snoozed, item.norm, Date.now());
   persist();
   render();
 });
-$("undo").addEventListener("click", () => { undo(state.work, state.snoozed); persist(); render(); });
+$("undo").addEventListener("click", () => {
+  const text = typedText(undo(state.work, state.snoozed));
+  if (text != null) { setEntry(text); return; }   // bring the typed word back
+  persist();
+  render();
+});
 
 $("save").addEventListener("click", () => {
   if (!saveWork(state.outbox, state.work, Date.now())) return;
@@ -335,46 +363,51 @@ $("refresh").addEventListener("click", async () => {
   }
 });
 
-// ------------------------------------------------------------------ add word
-function showAdd(show) {
-  $("add").hidden = !show;
-  if (show) {
-    $("new-word").value = "";
-    $("add-note").textContent = "";
-    $("new-word").focus();
+// ----------------------------------------------------------- typing a new word
+// + turns the card into an entry box; a score then adds the word like any other
+// answer and moves on, and undo brings the typed word back for another score.
+// "Not a word" drops it: it is never sent.
+function setEntry(text) {           // null leaves entry mode
+  state.entry = text == null ? null : { text };
+  if (state.entry) $("new-word").value = text;
+  persist();
+  render();
+  if (state.entry) $("new-word").focus();
+}
+
+function showEntry() {
+  const { decision } = newWordDecision($("new-word").value, 0);
+  const badges = $("badges");
+  badges.replaceChildren();
+  const b = document.createElement("span");
+  b.className = "badge";
+  b.textContent = "new word";
+  badges.append(b);
+  const known = new Set(state.repoDecided);
+  for (const batch of state.outbox.batches) for (const n of Object.keys(batch.decisions)) known.add(n);
+  for (const n of workDecisions(state.work).keys()) known.add(n);
+  $("auto").textContent = !decision ? "Type a word, then tap a score"
+    : known.has(decision.norm) ? "Already in your lists. A score replaces the old one."
+    : "Tap a score to add it";
+  $("gloss").textContent = "";
+  $("meta").textContent = "";
+  if (decision) {
+    const links = lookupLinks({ word: decision.word });
+    setTranslate(links);
+    $("copy").dataset.text = links.text;
+    $("search").href = links.search;
+  } else {
+    for (const id of ["translate", "search"]) $(id).removeAttribute("href");
+    $("copy").dataset.text = "";
   }
 }
-$("open-add").addEventListener("click", () => showAdd(true));
-$("close-add").addEventListener("click", () => showAdd(false));
 
-// A heads-up if the word is already in the lists (it can still be re-scored).
+$("open-add").addEventListener("click", () => setEntry(state.entry ? null : ""));
 $("new-word").addEventListener("input", () => {
-  const { decision } = newWordDecision($("new-word").value, 0);
-  const note = $("add-note");
-  if (!decision) { note.textContent = ""; return; }
-  const known = new Set(state.repoDecided);
-  for (const b of state.outbox.batches) for (const n of Object.keys(b.decisions)) known.add(n);
-  for (const n of workDecisions(state.work).keys()) known.add(n);
-  note.textContent = known.has(decision.norm)
-    ? "Already in your lists. Adding scores it again." : "";
+  state.entry = { text: $("new-word").value };
+  persist();
+  render();
 });
-
-for (const [name, score] of TIERS) {
-  const b = document.createElement("button");
-  b.className = "tier";
-  b.textContent = `${name} (${score})`;
-  b.addEventListener("click", () => {
-    const { decision, error } = newWordDecision($("new-word").value, score);
-    if (error) { $("add-note").textContent = error; return; }
-    pushDecision(state.work, decision);
-    persist();
-    render();
-    $("new-word").value = "";
-    $("add-note").textContent = `Added ${decision.word} (${score}). Add another, or Done.`;
-    $("new-word").focus();
-  });
-  $("add-tiers").append(b);
-}
 
 // ----------------------------------------------------------------- settings
 function showSettings(show) {
@@ -425,6 +458,7 @@ fetch("build.json", { cache: "no-store" })
 
 // -------------------------------------------------------------------- start
 buildTiers();
+if (state.entry) $("new-word").value = state.entry.text;
 render();
 if (!state.token) showSettings(true);
 window.addEventListener("online", () => { flush(); render(); });

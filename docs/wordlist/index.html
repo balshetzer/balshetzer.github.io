@@ -22,7 +22,7 @@
     <h1>Wordlist</h1>
     <span id="left" class="dim"></span>
     <button id="refresh" class="icon" aria-label="Refresh from GitHub">&#x21bb;</button>
-    <button id="open-add" class="icon" aria-label="Add a word">+</button>
+    <button id="open-add" class="icon" aria-label="Add a word" aria-pressed="false">+</button>
     <button id="open-settings" class="icon" aria-label="Settings">&#x2699;</button>
   </header>
 
@@ -31,6 +31,7 @@
       <section id="card" hidden>
         <div id="badges"></div>
         <div id="word" dir="rtl" lang="yi"></div>
+        <input id="new-word" dir="rtl" lang="yi" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="New word" hidden>
         <div id="auto"></div>
         <div id="gloss"></div>
         <div id="meta" class="dim"></div>
@@ -62,18 +63,6 @@
   </footer>
 
   <div id="toast" role="alert" hidden><span id="toast-text"></span><button id="toast-close" aria-label="Dismiss">&times;</button></div>
-
-  <section id="add" hidden>
-  <div class="panel">
-    <h2>Add a word</h2>
-    <label for="new-word">Word or phrase</label>
-    <input id="new-word" dir="rtl" lang="yi" autocomplete="off" autocapitalize="off" spellcheck="false">
-    <p id="add-note" class="dim"></p>
-    <div id="add-tiers"></div>
-    <p class="dim">Pick a score to add it. Save keeps it, like any other answer.</p>
-    <button id="close-add" class="primary wide">Done</button>
-  </div>
-  </section>
 
   <section id="settings" hidden>
   <div class="panel">
