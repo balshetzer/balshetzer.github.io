@@ -267,3 +267,18 @@ export function shouldAnnounce(outcome, manual) {
 export function flushOutcome(result) {
   return result.error ? { status: "failed", error: result.error } : { status: "silent" };
 }
+
+// ------------------------------------------------------------------ lookup
+// Links for checking a word outside the app. Points (nekudes) are dropped,
+// since most web text has none, and a word shown with several spellings
+// ("a/b") is looked up under its first.
+const POINTS = /[\u0591-\u05c7]/g;
+
+export function lookupLinks(item) {
+  const text = item.word.split("/")[0].replace(POINTS, "").trim();
+  const q = encodeURIComponent(text);
+  return {
+    translate: `https://translate.google.com/?sl=yi&tl=en&op=translate&text=${q}`,
+    search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}"`)}`,
+  };
+}

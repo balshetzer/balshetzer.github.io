@@ -2,7 +2,7 @@
 import { ApiError, GitHub } from "./api.js";
 import {
   TIERS, createSync, decisionFor, flushOutcome, hiddenSet, newOutbox,
-  nextItem, normsFromRepo, outcomeText, pushDecision, pushSkip, remaining,
+  lookupLinks, nextItem, normsFromRepo, outcomeText, pushDecision, pushSkip, remaining,
   requestRun, saveWork, shouldAnnounce, undo, workDecisions,
 } from "./logic.js";
 
@@ -183,6 +183,9 @@ function render() {
       ? `Auto score: ${item.score}` : "Not in the list yet";
     $("gloss").textContent = item.gloss || "";
     $("meta").textContent = `seen ${item.count.toLocaleString()}×`;
+    const links = lookupLinks(item);
+    $("translate").href = links.translate;
+    $("search").href = links.search;
   } else {
     $("empty-text").textContent = !haveToken
       ? "Open Settings to connect to GitHub."

@@ -46,6 +46,9 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 6
 #auto { font-size: 1.05rem; font-weight: 600; }
 #gloss { margin-top: 4px; line-height: 1.3; }
 #meta { margin-top: 2px; font-size: .9rem; }
+#lookup { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+#lookup a { padding: 6px 14px; border-radius: 99px; font-size: .9rem;
+            border: 1px solid var(--line); color: var(--accent); text-decoration: none; }
 #empty { color: var(--dim); }
 
 #tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
