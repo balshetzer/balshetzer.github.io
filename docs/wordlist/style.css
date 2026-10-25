@@ -16,7 +16,7 @@ body { margin: 0; font: 17px/1.4 system-ui, -apple-system, sans-serif; }
 [hidden] { display: none !important; }
 .dim { color: var(--dim); }
 
-#app { min-height: 100dvh; display: flex; flex-direction: column;
+#app { height: 100dvh; display: flex; flex-direction: column;
        max-width: 34rem; margin: 0 auto; padding: env(safe-area-inset-top) 0 0; }
 header { display: flex; align-items: center; gap: 4px; padding: 8px 12px 4px 16px; }
 header h1 { font-size: 1.1rem; margin: 0; flex: 1; }
@@ -26,7 +26,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0;
 button:disabled { opacity: .4; cursor: default; }
 button.icon { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 10px; }
 
-main { flex: 1; display: flex; flex-direction: column; padding: 8px 16px; gap: 12px; }
+/* The word card takes whatever room is left and scrolls if it must; the
+   buttons below it never move, however the text wraps. */
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 16px; gap: 12px; }
+#stage { flex: 1; min-height: 0; overflow-y: auto; }
 #card, #empty { background: var(--card); border: 1px solid var(--line);
                 border-radius: 16px; padding: 18px 16px; text-align: center; }
 #badges { min-height: 1.5rem; display: flex; gap: 6px; justify-content: center; }
@@ -47,10 +50,11 @@ button.secondary { min-height: 48px; border-radius: 12px;
                    border: 1px solid var(--line); background: var(--card); }
 button.danger { color: var(--danger); }
 
-footer { position: sticky; bottom: 0; background: var(--bg);
+footer { background: var(--bg);
          border-top: 1px solid var(--line); padding: 8px 16px;
          padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-#status { font-size: .88rem; min-height: 1.3rem; margin-bottom: 6px; }
+#status { font-size: .88rem; height: 1.3rem; margin-bottom: 6px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 button.primary { min-height: 52px; border-radius: 12px; font-weight: 600;
                  border: 2px solid var(--accent); color: var(--accent);
