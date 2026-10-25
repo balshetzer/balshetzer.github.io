@@ -282,13 +282,14 @@ export function lookupLinks(item) {
   return {
     text,
     translate,
-    search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}"`)}`,
+    // exact phrase; lr=lang_yi asks for pages in Yiddish (not Hebrew, which
+    // shares the script); udm=14 is Google's plain "Web" tab, with no AI
+    // overview
+    search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}"`)}&lr=lang_yi&udm=14`,
     // Android only: an intent asking the Translate app to translate shared
-    // text, and one making Chrome (not the Translate app) open the web page.
-    // Either falls back to the plain link if Chrome cannot deliver it.
+    // text. (Plain translate.google.com links open the app with nothing
+    // filled in.) Falls back to the web link if Chrome cannot deliver it.
     appIntent: "intent:#Intent;action=android.intent.action.SEND;type=text/plain;"
       + `package=com.google.android.apps.translate;S.android.intent.extra.TEXT=${q};${fallback};end`,
-    chromeIntent: "intent://translate.google.com/?sl=yi&tl=en&op=translate&text="
-      + `${q}#Intent;scheme=https;package=com.android.chrome;${fallback};end`,
   };
 }

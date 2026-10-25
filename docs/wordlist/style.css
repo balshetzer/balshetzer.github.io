@@ -49,6 +49,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 6
 #lookup { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
 #lookup a, #lookup button { padding: 6px 14px; border-radius: 99px; font-size: .9rem;
             border: 1px solid var(--line); color: var(--accent); text-decoration: none; }
+#lookup button { display: inline-flex; align-items: center; padding: 6px 12px; }
 #empty { color: var(--dim); }
 
 #tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

@@ -184,9 +184,7 @@ function render() {
     $("gloss").textContent = item.gloss || "";
     $("meta").textContent = `seen ${item.count.toLocaleString()}×`;
     const links = lookupLinks(item);
-    $("translate").href = links.translate;
-    $("translate-app").href = links.appIntent;
-    $("translate-chrome").href = links.chromeIntent;
+    setTranslate(links);
     $("copy").dataset.text = links.text;
     $("search").href = links.search;
   } else {
@@ -230,9 +228,14 @@ function dismissToast() {
 }
 $("toast").addEventListener("click", dismissToast);   // anywhere on the banner
 
-// Intent links only mean something on Android.
-if (/Android/i.test(navigator.userAgent)) {
-  for (const a of document.querySelectorAll("#lookup .android")) a.hidden = false;
+// On Android, Translate is an intent to the Translate app; elsewhere it is
+// the web page, in a new tab.
+const ANDROID = /Android/i.test(navigator.userAgent);
+
+function setTranslate(links) {
+  const a = $("translate");
+  a.href = ANDROID ? links.appIntent : links.translate;
+  if (ANDROID) a.removeAttribute("target");
 }
 
 $("copy").addEventListener("click", () => {
