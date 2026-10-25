@@ -282,10 +282,8 @@ export function lookupLinks(item) {
   return {
     text,
     translate,
-    // exact phrase; lr=lang_yi asks for pages in Yiddish (not Hebrew, which
-    // shares the script); udm=14 is Google's plain "Web" tab, with no AI
-    // overview
-    search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}"`)}&lr=lang_yi&udm=14`,
+    // the exact word, plus "yiddish" to steer Google away from Hebrew
+    search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}" yiddish`)}`,
     // Android only: an intent asking the Translate app to translate shared
     // text. (Plain translate.google.com links open the app with nothing
     // filled in.) Falls back to the web link if Chrome cannot deliver it.
