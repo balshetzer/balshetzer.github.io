@@ -185,6 +185,9 @@ function render() {
     $("meta").textContent = `seen ${item.count.toLocaleString()}×`;
     const links = lookupLinks(item);
     $("translate").href = links.translate;
+    $("translate-app").href = links.appIntent;
+    $("translate-chrome").href = links.chromeIntent;
+    $("copy").dataset.text = links.text;
     $("search").href = links.search;
   } else {
     $("empty-text").textContent = !haveToken
@@ -226,6 +229,19 @@ function dismissToast() {
   $("toast").hidden = true;
 }
 $("toast").addEventListener("click", dismissToast);   // anywhere on the banner
+
+// Intent links only mean something on Android.
+if (/Android/i.test(navigator.userAgent)) {
+  for (const a of document.querySelectorAll("#lookup .android")) a.hidden = false;
+}
+
+$("copy").addEventListener("click", () => {
+  const text = $("copy").dataset.text;
+  if (!text) return;
+  navigator.clipboard?.writeText(text).then(
+    () => toast("Copied"),
+    () => toast("Couldn't copy"));
+});
 
 // The one place the app talks to you about how something went.
 function announce(outcome, manual) {

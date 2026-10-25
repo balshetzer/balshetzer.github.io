@@ -277,8 +277,18 @@ const POINTS = /[\u0591-\u05c7]/g;
 export function lookupLinks(item) {
   const text = item.word.split("/")[0].replace(POINTS, "").trim();
   const q = encodeURIComponent(text);
+  const translate = `https://translate.google.com/?sl=yi&tl=en&op=translate&text=${q}`;
+  const fallback = `S.browser_fallback_url=${encodeURIComponent(translate)}`;
   return {
-    translate: `https://translate.google.com/?sl=yi&tl=en&op=translate&text=${q}`,
+    text,
+    translate,
     search: `https://www.google.com/search?q=${encodeURIComponent(`"${text}"`)}`,
+    // Android only: an intent asking the Translate app to translate shared
+    // text, and one making Chrome (not the Translate app) open the web page.
+    // Either falls back to the plain link if Chrome cannot deliver it.
+    appIntent: "intent:#Intent;action=android.intent.action.SEND;type=text/plain;"
+      + `package=com.google.android.apps.translate;S.android.intent.extra.TEXT=${q};${fallback};end`,
+    chromeIntent: "intent://translate.google.com/?sl=yi&tl=en&op=translate&text="
+      + `${q}#Intent;scheme=https;package=com.android.chrome;${fallback};end`,
   };
 }
