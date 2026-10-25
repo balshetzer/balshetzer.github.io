@@ -27,6 +27,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0;
          background: none; -webkit-tap-highlight-color: transparent; }
 button:disabled { opacity: .4; cursor: default; }
 button.icon { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 10px; }
+button.icon.spinning { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* The page is as tall as the screen (not a viewport unit, which Android
    measures wrongly). The word card takes whatever room is left, so the
@@ -67,7 +69,11 @@ button.primary.hot { background: var(--accent); color: var(--on-accent); }
 
 #toast { position: fixed; left: 16px; right: 16px; top: calc(10px + env(safe-area-inset-top));
          background: var(--warn-bg); border: 1px solid var(--line);
-         border-radius: 12px; padding: 12px 14px; z-index: 5; }
+         border-radius: 12px; padding: 4px 4px 4px 14px; z-index: 5;
+         display: flex; align-items: center; gap: 8px; cursor: pointer; }
+#toast[hidden] { display: none; }
+#toast-text { flex: 1; padding: 8px 0; }
+#toast-close { width: 44px; height: 44px; font-size: 1.5rem; border-radius: 10px; }
 
 #settings { position: fixed; inset: 0; z-index: 10; overflow: auto; background: var(--bg);
             padding: calc(16px + env(safe-area-inset-top)) 16px 24px; }

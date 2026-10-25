@@ -57,9 +57,13 @@ async function flush({ quiet = true } = {}) {
 
 // ------------------------------------------------------------------ refresh
 let refreshing = false;
+// Returns "ok", "failed", or why nothing was done: "token", "offline", "busy".
 async function refresh({ quiet = true } = {}) {
-  if (!state.token || refreshing || !navigator.onLine) return;
+  if (!state.token) return "token";
+  if (!navigator.onLine) return "offline";
+  if (refreshing) return "busy";
   refreshing = true;
+  let outcome = "ok";
   try {
     const gh = github();
     const [queueText, overrides, excluded, myWords, inboxNames] = await Promise.all([
@@ -79,10 +83,12 @@ async function refresh({ quiet = true } = {}) {
     persist();
   } catch (e) {
     report(e, quiet);
+    outcome = "failed";
   } finally {
     refreshing = false;
     render();
   }
+  return outcome;
 }
 
 // ----------------------------------------------------------------- run poll
@@ -196,12 +202,17 @@ function render() {
 
 let toastTimer = 0;
 function toast(message) {
-  const t = $("toast");
-  t.textContent = message;
-  t.hidden = false;
+  $("toast-text").textContent = message;
+  $("toast").hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+  toastTimer = setTimeout(dismissToast, 6000);
 }
+
+function dismissToast() {
+  clearTimeout(toastTimer);
+  $("toast").hidden = true;
+}
+$("toast").addEventListener("click", dismissToast);   // anywhere on the banner
 
 function report(error, quiet) {
   if (error instanceof ApiError && error.kind === "network") {
@@ -257,9 +268,26 @@ $("run").addEventListener("click", () => {
   render();
   flush({ quiet: false });
 });
+// The ↻ button spins while it works, then says what happened.
 $("refresh").addEventListener("click", async () => {
-  await flush({ quiet: false });
-  await refresh({ quiet: false });
+  const button = $("refresh");
+  if (button.classList.contains("spinning")) return;
+  button.classList.add("spinning");
+  try {
+    const [, outcome] = await Promise.all([
+      flush({ quiet: false }).then(() => refresh({ quiet: false })),
+      sleep(700),                  // long enough to be seen on a fast connection
+    ]);
+    if (outcome === "ok") {
+      toast(`Up to date · ${remaining(state.queue.items, hidden())} left`);
+    } else if (outcome === "offline") {
+      toast("Offline. Your work is saved on this device.");
+    } else if (outcome === "token") {
+      toast("Open Settings to connect to GitHub.");
+    }                              // "failed": refresh() already said why
+  } finally {
+    button.classList.remove("spinning");
+  }
 });
 
 // ----------------------------------------------------------------- settings
