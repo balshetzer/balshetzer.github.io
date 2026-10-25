@@ -11,12 +11,12 @@
   }
 }
 * { box-sizing: border-box; }
-html { background: var(--bg); color: var(--fg); -webkit-text-size-adjust: 100%; }
-body { margin: 0; font: 17px/1.4 system-ui, -apple-system, sans-serif; }
+html { height: 100%; background: var(--bg); color: var(--fg); -webkit-text-size-adjust: 100%; }
+body { height: 100%; margin: 0; font: 17px/1.4 system-ui, -apple-system, sans-serif; }
 [hidden] { display: none !important; }
 .dim { color: var(--dim); }
 
-#app { height: 100dvh; display: flex; flex-direction: column;
+#app { height: 100%; display: flex; flex-direction: column;
        max-width: 34rem; margin: 0 auto; padding: env(safe-area-inset-top) 0 0; }
 header { display: flex; align-items: center; gap: 4px; padding: 8px 12px 4px 16px; }
 header h1 { font-size: 1.1rem; margin: 0; flex: 1; }
@@ -26,37 +26,39 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0;
 button:disabled { opacity: .4; cursor: default; }
 button.icon { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 10px; }
 
-/* The word card takes whatever room is left and scrolls if it must; the
-   buttons below it never move, however the text wraps. */
-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 16px; gap: 12px; }
+/* The page is as tall as the screen (not a viewport unit, which Android
+   measures wrongly). The word card takes whatever room is left, so the
+   buttons below it sit at the bottom and do not move as the text wraps; the
+   card scrolls inside itself only if a screen is too short for it. */
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 6px 16px; gap: 10px; }
 #stage { flex: 1; min-height: 0; overflow-y: auto; }
 #card, #empty { background: var(--card); border: 1px solid var(--line);
-                border-radius: 16px; padding: 18px 16px; text-align: center; }
-#badges { min-height: 1.5rem; display: flex; gap: 6px; justify-content: center; }
+                border-radius: 16px; padding: 12px 14px; text-align: center; }
+#badges { min-height: 1.4rem; display: flex; gap: 6px; justify-content: center; }
 .badge { font-size: .75rem; padding: 2px 9px; border-radius: 99px;
          border: 1px solid var(--accent); color: var(--accent); }
-#word { font-size: clamp(2.4rem, 13vw, 4.2rem); line-height: 1.25;
-        margin: 6px 0; overflow-wrap: anywhere; }
+#word { font-size: clamp(2rem, 10vw, 3.2rem); line-height: 1.25;
+        margin: 2px 0; overflow-wrap: anywhere; }
 #auto { font-size: 1.05rem; font-weight: 600; }
-#gloss { margin-top: 6px; }
-#meta { margin-top: 6px; font-size: .9rem; }
+#gloss { margin-top: 4px; line-height: 1.3; }
+#meta { margin-top: 2px; font-size: .9rem; }
 #empty { color: var(--dim); }
 
 #tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tier { min-height: 64px; border-radius: 14px; font-size: 1.15rem; font-weight: 600;
+.tier { min-height: 56px; border-radius: 14px; font-size: 1.15rem; font-weight: 600;
         background: var(--accent); color: var(--on-accent); }
 #more { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-button.secondary { min-height: 48px; border-radius: 12px;
+button.secondary { min-height: 44px; border-radius: 12px;
                    border: 1px solid var(--line); background: var(--card); }
 button.danger { color: var(--danger); }
 
 footer { background: var(--bg);
          border-top: 1px solid var(--line); padding: 8px 16px;
          padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-#status { font-size: .88rem; height: 1.3rem; margin-bottom: 6px;
+#status { font-size: .85rem; height: 1.2rem; margin-bottom: 4px;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-button.primary { min-height: 52px; border-radius: 12px; font-weight: 600;
+button.primary { min-height: 48px; border-radius: 12px; font-weight: 600;
                  border: 2px solid var(--accent); color: var(--accent);
                  background: transparent; }
 button.primary.hot { background: var(--accent); color: var(--on-accent); }
